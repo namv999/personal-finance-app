@@ -1,0 +1,21 @@
+# Flutter
+frontend/build/
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/**/generated_plugin_registrant.dart
+
+# Spring Boot / Java
+backend/target/
+backend/*.class
+backend/.mvn/
+backend/HELP.md
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
