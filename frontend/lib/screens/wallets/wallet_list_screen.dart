@@ -36,18 +36,24 @@ class WalletListScreen extends StatelessWidget {
                     final wallet = provider.wallets[index];
                     return Card(
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
                         leading: CircleAvatar(
-                          backgroundColor: colorFromHex(wallet.color).withOpacity(0.15),
-                          child: Icon(iconFromName(wallet.icon), color: colorFromHex(wallet.color)),
+                          backgroundColor: colorFromHex(wallet.color)
+                              .withValues(alpha: 0.15),
+                          child: Icon(iconFromName(wallet.icon),
+                              color: colorFromHex(wallet.color)),
                         ),
-                        title: Text(wallet.walletName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(wallet.walletName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(wallet.walletType),
                         trailing: Text(
                           Formatters.currency(wallet.currentBalance),
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        onTap: () => context.push(AppRoutes.walletDetailPath(wallet.id)),
+                        onTap: () =>
+                            context.push(AppRoutes.walletDetailPath(wallet.id)),
                       ),
                     );
                   },
@@ -59,7 +65,9 @@ class WalletListScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Ví của tôi'),
           actions: [
-            IconButton(icon: const Icon(Icons.add), onPressed: () => context.push(AppRoutes.walletAdd)),
+            IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => context.push(AppRoutes.walletAdd)),
           ],
         ),
         body: body,

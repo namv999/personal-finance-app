@@ -94,7 +94,7 @@ Color colorFromHex(String? hex) {
 }
 
 String colorToHex(Color color) =>
-    '#${color.value.toRadixString(16).substring(2)}';
+    '#${color.toARGB32().toRadixString(16).substring(2)}';
 
 /// Inline icon + color picker used by wallet/category forms.
 class IconColorPicker extends StatelessWidget {
@@ -130,10 +130,12 @@ class IconColorPicker extends StatelessWidget {
               child: CircleAvatar(
                 radius: 22,
                 backgroundColor: isSelected
-                    ? colorFromHex(selectedColor).withOpacity(0.2)
+                    ? colorFromHex(selectedColor).withValues(alpha: 0.2)
                     : AppColors.background,
                 child: Icon(icon,
-                    color: isSelected ? colorFromHex(selectedColor) : AppColors.textSecondary),
+                    color: isSelected
+                        ? colorFromHex(selectedColor)
+                        : AppColors.textSecondary),
               ),
             );
           }).toList(),
@@ -153,7 +155,9 @@ class IconColorPicker extends StatelessWidget {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: color,
-                child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 18)
+                    : null,
               ),
             );
           }).toList(),

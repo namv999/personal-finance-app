@@ -56,7 +56,7 @@ class TransferRepository {
     if (goalId != null) await _goals.recomputeSavedAmount(goalId);
 
     // Transferring money into a savings wallet counts as "saving today".
-    await _streaks.markSavedToday(userId);
+    await _streaks.markSaved(userId, transferDate);
 
     return transfer;
   }

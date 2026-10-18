@@ -81,33 +81,42 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     final provider = context.read<TransactionProvider>();
     final amount = int.parse(_amountController.text.replaceAll(',', ''));
 
-    if (isEditing && _editing != null) {
-      await provider.editTransaction(_editing!.copyWith(
-        walletId: _walletId,
-        categoryId: _categoryId,
-        type: _type,
-        amount: amount,
-        note: _noteController.text.trim(),
-        transactionDate: _date,
-      ));
-    } else {
-      await provider.addTransaction(
-        walletId: _walletId!,
-        categoryId: _categoryId,
-        type: _type,
-        amount: amount,
-        note: _noteController.text.trim(),
-        date: _date,
-      );
+    try {
+      if (isEditing && _editing != null) {
+        await provider.editTransaction(_editing!.copyWith(
+          walletId: _walletId,
+          categoryId: _categoryId,
+          type: _type,
+          amount: amount,
+          note: _noteController.text.trim(),
+          transactionDate: _date,
+        ));
+      } else {
+        await provider.addTransaction(
+          walletId: _walletId!,
+          categoryId: _categoryId,
+          type: _type,
+          amount: amount,
+          note: _noteController.text.trim(),
+          date: _date,
+        );
+      }
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      }
     }
-    if (mounted) context.pop();
   }
 
   Future<void> _delete() async {
     if (_editing == null) return;
     final confirmed = await confirmDelete(context, itemLabel: 'giao dịch này');
     if (confirmed) {
-      await context.read<TransactionProvider>().deleteTransaction(_editing!.id, _editing!.walletId);
+      await context
+          .read<TransactionProvider>()
+          .deleteTransaction(_editing!.id, _editing!.walletId);
       if (mounted) context.pop();
     }
   }
@@ -116,12 +125,18 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   Widget build(BuildContext context) {
     final wallets = context.watch<WalletProvider>().wallets;
     final categories = context.watch<CategoryProvider>();
-    final categoryOptions = _type == CategoryType.income ? categories.incomeCategories : categories.expenseCategories;
+    final categoryOptions = _type == CategoryType.income
+        ? categories.incomeCategories
+        : categories.expenseCategories;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Sửa giao dịch' : 'Giao dịch mới'),
-        actions: [if (isEditing) IconButton(icon: const Icon(Icons.delete_outline), onPressed: _delete)],
+        actions: [
+          if (isEditing)
+            IconButton(
+                icon: const Icon(Icons.delete_outline), onPressed: _delete)
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -132,8 +147,10 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
             children: [
               SegmentedButton<CategoryType>(
                 segments: const [
-                  ButtonSegment(value: CategoryType.expense, label: Text('Chi tiêu')),
-                  ButtonSegment(value: CategoryType.income, label: Text('Thu nhập')),
+                  ButtonSegment(
+                      value: CategoryType.expense, label: Text('Chi tiêu')),
+                  ButtonSegment(
+                      value: CategoryType.income, label: Text('Thu nhập')),
                 ],
                 selected: {_type},
                 onSelectionChanged: (s) => setState(() {
@@ -150,17 +167,26 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                value: wallets.any((w) => w.id == _walletId) ? _walletId : null,
+                initialValue:
+                    wallets.any((w) => w.id == _walletId) ? _walletId : null,
                 decoration: const InputDecoration(labelText: 'Ví'),
-                items: wallets.map((w) => DropdownMenuItem(value: w.id, child: Text(w.walletName))).toList(),
+                items: wallets
+                    .map((w) => DropdownMenuItem(
+                        value: w.id, child: Text(w.walletName)))
+                    .toList(),
                 onChanged: (v) => setState(() => _walletId = v),
                 validator: (v) => v == null ? 'Vui lòng chọn ví' : null,
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                value: categoryOptions.any((c) => c.id == _categoryId) ? _categoryId : null,
+                initialValue: categoryOptions.any((c) => c.id == _categoryId)
+                    ? _categoryId
+                    : null,
                 decoration: const InputDecoration(labelText: 'Danh mục'),
-                items: categoryOptions.map((c) => DropdownMenuItem(value: c.id, child: Text(c.categoryName))).toList(),
+                items: categoryOptions
+                    .map((c) => DropdownMenuItem(
+                        value: c.id, child: Text(c.categoryName)))
+                    .toList(),
                 onChanged: (v) => setState(() => _categoryId = v),
               ),
               const SizedBox(height: 14),
@@ -172,9 +198,14 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                 prefixIcon: const Icon(Icons.calendar_today_outlined),
               ),
               const SizedBox(height: 14),
-              AppTextField(label: 'Ghi chú (tùy chọn)', controller: _noteController, maxLines: 2),
+              AppTextField(
+                  label: 'Ghi chú (tùy chọn)',
+                  controller: _noteController,
+                  maxLines: 2),
               const SizedBox(height: 24),
-              ElevatedButton(onPressed: _submit, child: Text(isEditing ? 'Lưu thay đổi' : 'Thêm giao dịch')),
+              ElevatedButton(
+                  onPressed: _submit,
+                  child: Text(isEditing ? 'Lưu thay đổi' : 'Thêm giao dịch')),
             ],
           ),
         ),

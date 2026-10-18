@@ -4,6 +4,7 @@ class Wallet {
   final String walletName;
   final String walletType; // free-form: SPENDING, SAVINGS, or user-defined
   final int currentBalance; // cached value, periodically recomputed
+  final int openingBalance;
   final String? color;
   final String? icon;
   final DateTime? updatedAt;
@@ -15,6 +16,7 @@ class Wallet {
     required this.walletName,
     required this.walletType,
     this.currentBalance = 0,
+    this.openingBalance = 0,
     this.color,
     this.icon,
     this.updatedAt,
@@ -27,6 +29,7 @@ class Wallet {
         walletName: map['wallet_name'],
         walletType: map['wallet_type'],
         currentBalance: map['current_balance'] ?? 0,
+        openingBalance: map['opening_balance'] ?? map['current_balance'] ?? 0,
         color: map['color'],
         icon: map['icon'],
         updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
@@ -39,6 +42,7 @@ class Wallet {
         'wallet_name': walletName,
         'wallet_type': walletType,
         'current_balance': currentBalance,
+        'opening_balance': openingBalance,
         'color': color,
         'icon': icon,
         'updated_at': updatedAt?.toIso8601String(),
@@ -51,6 +55,7 @@ class Wallet {
         walletName: json['walletName'],
         walletType: json['walletType'],
         currentBalance: json['currentBalance'] ?? 0,
+        openingBalance: json['openingBalance'] ?? json['currentBalance'] ?? 0,
         color: json['color'],
         icon: json['icon'],
         updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
@@ -63,6 +68,7 @@ class Wallet {
         'walletName': walletName,
         'walletType': walletType,
         'currentBalance': currentBalance,
+        'openingBalance': openingBalance,
         'color': color,
         'icon': icon,
         'updatedAt': updatedAt?.toIso8601String(),
@@ -73,6 +79,7 @@ class Wallet {
     String? walletName,
     String? walletType,
     int? currentBalance,
+    int? openingBalance,
     String? color,
     String? icon,
     bool? isDeleted,
@@ -83,6 +90,7 @@ class Wallet {
         walletName: walletName ?? this.walletName,
         walletType: walletType ?? this.walletType,
         currentBalance: currentBalance ?? this.currentBalance,
+        openingBalance: openingBalance ?? this.openingBalance,
         color: color ?? this.color,
         icon: icon ?? this.icon,
         updatedAt: DateTime.now(),

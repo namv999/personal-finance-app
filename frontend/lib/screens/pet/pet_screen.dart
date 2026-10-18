@@ -31,14 +31,19 @@ class PetScreen extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(pet.petName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                            Text(pet.petName,
+                                style: const TextStyle(
+                                    fontSize: 22, fontWeight: FontWeight.w800)),
                             const SizedBox(width: 6),
-                            const Icon(Icons.edit, size: 16, color: AppColors.textSecondary),
+                            const Icon(Icons.edit,
+                                size: 16, color: AppColors.textSecondary),
                           ],
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text('Cấp độ ${pet.level}', style: const TextStyle(color: AppColors.textSecondary)),
+                      Text('Cấp độ ${pet.level}',
+                          style:
+                              const TextStyle(color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
@@ -52,8 +57,10 @@ class PetScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Kinh nghiệm', style: TextStyle(fontWeight: FontWeight.w600)),
-                            Text('${pet.experiencePoints % pet.xpForNextLevel} / ${pet.xpForNextLevel} XP'),
+                            const Text('Kinh nghiệm',
+                                style: TextStyle(fontWeight: FontWeight.w600)),
+                            Text(
+                                '${pet.experiencePoints % pet.xpForNextLevel} / ${pet.xpForNextLevel} XP'),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -69,7 +76,8 @@ class PetScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         const Text(
                           'Ghi lại giao dịch và tiết kiệm mỗi ngày để nhận kinh nghiệm cho thú cưng!',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -81,14 +89,21 @@ class PetScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        const Icon(Icons.local_fire_department, color: Colors.orange, size: 32),
+                        const Icon(Icons.local_fire_department,
+                            color: Colors.orange, size: 32),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Chuỗi tiết kiệm: ${streak?.currentStreakDays ?? 0} ngày', style: const TextStyle(fontWeight: FontWeight.w700)),
-                              Text('Kỷ lục: ${streak?.longestStreak ?? 0} ngày', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                              Text(
+                                  'Chuỗi tiết kiệm: ${streak?.currentStreakDays ?? 0} ngày',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700)),
+                              Text('Kỷ lục: ${streak?.longestStreak ?? 0} ngày',
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12)),
                             ],
                           ),
                         ),
@@ -101,7 +116,8 @@ class PetScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showRenameDialog(BuildContext context, String currentName) async {
+  Future<void> _showRenameDialog(
+      BuildContext context, String currentName) async {
     final controller = TextEditingController(text: currentName);
     final newName = await showDialog<String>(
       context: context,
@@ -109,8 +125,11 @@ class PetScreen extends StatelessWidget {
         title: const Text('Đổi tên thú cưng'),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-          TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Lưu')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Lưu')),
         ],
       ),
     );
@@ -135,7 +154,7 @@ class _PetAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.secondary.withOpacity(0.2),
+        color: AppColors.secondary.withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(Icons.pets, size: size * 0.5, color: AppColors.secondary),

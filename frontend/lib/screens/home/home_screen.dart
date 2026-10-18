@@ -84,7 +84,10 @@ class _BalanceCard extends StatelessWidget {
           const Text('Tổng số dư', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 6),
           Text(Formatters.currency(totalBalance),
-              style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800)),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -140,7 +143,11 @@ class _SummaryTile extends StatelessWidget {
   final int amount;
   final Color color;
   final IconData icon;
-  const _SummaryTile({required this.label, required this.amount, required this.color, required this.icon});
+  const _SummaryTile(
+      {required this.label,
+      required this.amount,
+      required this.color,
+      required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -151,12 +158,19 @@ class _SummaryTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              CircleAvatar(radius: 14, backgroundColor: color.withOpacity(0.15), child: Icon(icon, size: 16, color: color)),
+              CircleAvatar(
+                  radius: 14,
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  child: Icon(icon, size: 16, color: color)),
               const SizedBox(width: 8),
-              Expanded(child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+              Expanded(
+                  child: Text(label,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary))),
             ]),
             const SizedBox(height: 10),
-            Text(Formatters.currency(amount), style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(Formatters.currency(amount),
+                style: const TextStyle(fontWeight: FontWeight.w700)),
           ],
         ),
       ),
@@ -181,7 +195,7 @@ class _PetStreakRow extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: AppColors.secondary.withOpacity(0.2),
+                backgroundColor: AppColors.secondary.withValues(alpha: 0.2),
                 child: const Icon(Icons.pets, color: AppColors.secondary),
               ),
               const SizedBox(width: 12),
@@ -189,12 +203,18 @@ class _PetStreakRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(pet != null ? '${pet.petName} · Lv.${pet.level}' : 'Thú cưng',
+                    Text(
+                        pet != null
+                            ? '${pet.petName} · Lv.${pet.level}'
+                            : 'Thú cưng',
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
                     Text(
-                      streak != null ? 'Chuỗi tiết kiệm: ${streak.currentStreakDays} ngày 🔥' : '',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      streak != null
+                          ? 'Chuỗi tiết kiệm: ${streak.currentStreakDays} ngày 🔥'
+                          : '',
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -227,12 +247,15 @@ class _SpendingByCategoryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Chi tiêu theo danh mục', style: TextStyle(fontWeight: FontWeight.w700)),
+                const Text('Chi tiêu theo danh mục',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
                 if (entries.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(child: Text('Chưa có chi tiêu tháng này', style: TextStyle(color: AppColors.textSecondary))),
+                    child: Center(
+                        child: Text('Chưa có chi tiêu tháng này',
+                            style: TextStyle(color: AppColors.textSecondary))),
                   )
                 else
                   SizedBox(
@@ -248,7 +271,8 @@ class _SpendingByCategoryCard extends StatelessWidget {
                                 for (final e in entries.take(6))
                                   PieChartSectionData(
                                     value: e.value.toDouble(),
-                                    color: colorFromHex(categoryProvider.byId(e.key)?.color),
+                                    color: colorFromHex(
+                                        categoryProvider.byId(e.key)?.color),
                                     title: '',
                                     radius: 42,
                                   ),
@@ -262,17 +286,24 @@ class _SpendingByCategoryCard extends StatelessWidget {
                             children: [
                               for (final e in entries.take(6))
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                   child: Row(
                                     children: [
                                       CircleAvatar(
                                         radius: 5,
-                                        backgroundColor: colorFromHex(categoryProvider.byId(e.key)?.color),
+                                        backgroundColor: colorFromHex(
+                                            categoryProvider
+                                                .byId(e.key)
+                                                ?.color),
                                       ),
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          categoryProvider.byId(e.key)?.categoryName ?? 'Khác',
+                                          categoryProvider
+                                                  .byId(e.key)
+                                                  ?.categoryName ??
+                                              'Khác',
                                           style: const TextStyle(fontSize: 12),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -298,7 +329,8 @@ class _SpendingByCategoryCard extends StatelessWidget {
 class _RecentTransactionsCard extends StatelessWidget {
   final List<dynamic> transactions;
   final CategoryProvider categories;
-  const _RecentTransactionsCard({required this.transactions, required this.categories});
+  const _RecentTransactionsCard(
+      {required this.transactions, required this.categories});
 
   @override
   Widget build(BuildContext context) {
@@ -311,31 +343,43 @@ class _RecentTransactionsCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Giao dịch gần đây', style: TextStyle(fontWeight: FontWeight.w700)),
-                TextButton(onPressed: () => context.push(AppRoutes.transactions), child: const Text('Xem tất cả')),
+                const Text('Giao dịch gần đây',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                TextButton(
+                    onPressed: () => context.push(AppRoutes.transactions),
+                    child: const Text('Xem tất cả')),
               ],
             ),
             if (transactions.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Chưa có giao dịch nào', style: TextStyle(color: AppColors.textSecondary)),
+                child: Text('Chưa có giao dịch nào',
+                    style: TextStyle(color: AppColors.textSecondary)),
               )
             else
               for (final tx in transactions)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
-                    backgroundColor: colorFromHex(categories.byId(tx.categoryId)?.color).withOpacity(0.15),
-                    child: Icon(iconFromName(categories.byId(tx.categoryId)?.icon),
-                        color: colorFromHex(categories.byId(tx.categoryId)?.color), size: 18),
+                    backgroundColor:
+                        colorFromHex(categories.byId(tx.categoryId)?.color)
+                            .withValues(alpha: 0.15),
+                    child: Icon(
+                        iconFromName(categories.byId(tx.categoryId)?.icon),
+                        color:
+                            colorFromHex(categories.byId(tx.categoryId)?.color),
+                        size: 18),
                   ),
-                  title: Text(categories.byId(tx.categoryId)?.categoryName ?? 'Không phân loại'),
+                  title: Text(categories.byId(tx.categoryId)?.categoryName ??
+                      'Không phân loại'),
                   subtitle: Text(Formatters.date(tx.transactionDate)),
                   trailing: Text(
                     '${tx.type == CategoryType.income ? '+' : '-'}${Formatters.currency(tx.amount)}',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: tx.type == CategoryType.income ? AppColors.income : AppColors.expense,
+                      color: tx.type == CategoryType.income
+                          ? AppColors.income
+                          : AppColors.expense,
                     ),
                   ),
                 ),

@@ -36,10 +36,30 @@ class DbHelper {
     final path = join(dbPath, 'personal_finance.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+          'ALTER TABLE ${Tables.wallets} ADD COLUMN opening_balance INTEGER NOT NULL DEFAULT 0');
+      // Recover the original balance from the cached balance and its ledger.
+      await db.execute(
+          '''UPDATE ${Tables.wallets}
+             SET opening_balance = current_balance
+               - COALESCE((SELECT SUM(amount) FROM ${Tables.transactions}
+                   WHERE wallet_id = ${Tables.wallets}.id AND type = 'INCOME' AND is_deleted = 0), 0)
+               + COALESCE((SELECT SUM(amount) FROM ${Tables.transactions}
+                   WHERE wallet_id = ${Tables.wallets}.id AND type = 'EXPENSE' AND is_deleted = 0), 0)
+               + COALESCE((SELECT SUM(amount) FROM ${Tables.transfers}
+                   WHERE source_wallet_id = ${Tables.wallets}.id AND is_deleted = 0), 0)
+               - COALESCE((SELECT SUM(amount) FROM ${Tables.transfers}
+                   WHERE destination_wallet_id = ${Tables.wallets}.id AND is_deleted = 0), 0)''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -65,6 +85,7 @@ class DbHelper {
         wallet_name TEXT NOT NULL,
         wallet_type TEXT NOT NULL,
         current_balance INTEGER DEFAULT 0,
+        opening_balance INTEGER NOT NULL DEFAULT 0,
         color TEXT,
         icon TEXT,
         updated_at TEXT,

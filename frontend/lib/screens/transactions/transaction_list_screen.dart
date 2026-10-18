@@ -35,7 +35,8 @@ class TransactionListScreen extends StatelessWidget {
                 onRefresh: () => provider.load(),
                 child: ListView(
                   padding: const EdgeInsets.all(16),
-                  children: _groupByDate(provider.transactions, categories, context),
+                  children:
+                      _groupByDate(provider.transactions, categories, context),
                 ),
               );
 
@@ -43,8 +44,8 @@ class TransactionListScreen extends StatelessWidget {
     return Scaffold(appBar: AppBar(title: const Text('Giao dịch')), body: body);
   }
 
-  List<Widget> _groupByDate(
-      List<FinanceTransaction> transactions, CategoryProvider categories, BuildContext context) {
+  List<Widget> _groupByDate(List<FinanceTransaction> transactions,
+      CategoryProvider categories, BuildContext context) {
     final groups = <String, List<FinanceTransaction>>{};
     for (final tx in transactions) {
       final key = Formatters.date(tx.transactionDate);
@@ -55,24 +56,33 @@ class TransactionListScreen extends StatelessWidget {
     groups.forEach((date, txs) {
       widgets.add(Padding(
         padding: const EdgeInsets.only(top: 12, bottom: 6),
-        child: Text(date, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+        child: Text(date,
+            style: const TextStyle(
+                fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
       ));
       for (final tx in txs) {
         widgets.add(Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: colorFromHex(categories.byId(tx.categoryId)?.color).withOpacity(0.15),
+              backgroundColor:
+                  colorFromHex(categories.byId(tx.categoryId)?.color)
+                      .withValues(alpha: 0.15),
               child: Icon(iconFromName(categories.byId(tx.categoryId)?.icon),
-                  color: colorFromHex(categories.byId(tx.categoryId)?.color), size: 18),
+                  color: colorFromHex(categories.byId(tx.categoryId)?.color),
+                  size: 18),
             ),
-            title: Text(categories.byId(tx.categoryId)?.categoryName ?? 'Không phân loại'),
-            subtitle: tx.note != null && tx.note!.isNotEmpty ? Text(tx.note!) : null,
+            title: Text(categories.byId(tx.categoryId)?.categoryName ??
+                'Không phân loại'),
+            subtitle:
+                tx.note != null && tx.note!.isNotEmpty ? Text(tx.note!) : null,
             trailing: Text(
               '${tx.type == CategoryType.income ? '+' : '-'}${Formatters.currency(tx.amount)}',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: tx.type == CategoryType.income ? AppColors.income : AppColors.expense,
+                color: tx.type == CategoryType.income
+                    ? AppColors.income
+                    : AppColors.expense,
               ),
             ),
             onTap: () => context.push(AppRoutes.transactionEditPath(tx.id)),

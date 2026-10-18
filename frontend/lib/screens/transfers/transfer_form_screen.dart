@@ -45,7 +45,11 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2100));
+    final picked = await showDatePicker(
+        context: context,
+        initialDate: _date,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2100));
     if (picked != null) setState(() => _date = picked);
   }
 
@@ -64,7 +68,8 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
     }
   }
@@ -84,30 +89,46 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String>(
-                value: wallets.any((w) => w.id == _sourceId) ? _sourceId : null,
+                initialValue:
+                    wallets.any((w) => w.id == _sourceId) ? _sourceId : null,
                 decoration: const InputDecoration(labelText: 'Từ ví'),
-                items: wallets.map((w) => DropdownMenuItem(value: w.id, child: Text(w.walletName))).toList(),
+                items: wallets
+                    .map((w) => DropdownMenuItem(
+                        value: w.id, child: Text(w.walletName)))
+                    .toList(),
                 onChanged: (v) => setState(() => _sourceId = v),
                 validator: (v) => v == null ? 'Chọn ví nguồn' : null,
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                value: wallets.any((w) => w.id == _destinationId) ? _destinationId : null,
+                initialValue: wallets.any((w) => w.id == _destinationId)
+                    ? _destinationId
+                    : null,
                 decoration: const InputDecoration(labelText: 'Đến ví'),
-                items: wallets.map((w) => DropdownMenuItem(value: w.id, child: Text(w.walletName))).toList(),
+                items: wallets
+                    .map((w) => DropdownMenuItem(
+                        value: w.id, child: Text(w.walletName)))
+                    .toList(),
                 onChanged: (v) => setState(() => _destinationId = v),
                 validator: (v) => v == null ? 'Chọn ví đích' : null,
               ),
               const SizedBox(height: 14),
-              AppTextField(label: 'Số tiền', controller: _amountController, keyboardType: TextInputType.number, validator: Validators.positiveAmount),
+              AppTextField(
+                  label: 'Số tiền',
+                  controller: _amountController,
+                  keyboardType: TextInputType.number,
+                  validator: Validators.positiveAmount),
               const SizedBox(height: 14),
               if (goals.isNotEmpty)
                 DropdownButtonFormField<String?>(
-                  value: _goalId,
-                  decoration: const InputDecoration(labelText: 'Liên kết mục tiêu tiết kiệm (tùy chọn)'),
+                  initialValue: _goalId,
+                  decoration: const InputDecoration(
+                      labelText: 'Liên kết mục tiêu tiết kiệm (tùy chọn)'),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('Không liên kết')),
-                    ...goals.map((g) => DropdownMenuItem(value: g.id, child: Text(g.goalName))),
+                    const DropdownMenuItem(
+                        value: null, child: Text('Không liên kết')),
+                    ...goals.map((g) =>
+                        DropdownMenuItem(value: g.id, child: Text(g.goalName))),
                   ],
                   onChanged: (v) => setState(() => _goalId = v),
                 ),
@@ -120,9 +141,13 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
                 prefixIcon: const Icon(Icons.calendar_today_outlined),
               ),
               const SizedBox(height: 14),
-              AppTextField(label: 'Ghi chú (tùy chọn)', controller: _noteController, maxLines: 2),
+              AppTextField(
+                  label: 'Ghi chú (tùy chọn)',
+                  controller: _noteController,
+                  maxLines: 2),
               const SizedBox(height: 24),
-              ElevatedButton(onPressed: _submit, child: const Text('Chuyển khoản')),
+              ElevatedButton(
+                  onPressed: _submit, child: const Text('Chuyển khoản')),
             ],
           ),
         ),

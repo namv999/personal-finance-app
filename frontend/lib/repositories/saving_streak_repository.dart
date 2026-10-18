@@ -21,19 +21,22 @@ class SavingStreakRepository {
     return rows.isEmpty ? null : SavingStreak.fromMap(rows.first);
   }
 
-  Future<void> markSavedToday(String userId) async {
+  Future<void> markSaved(String userId, DateTime savedDate) async {
     final streak = await getForUser(userId);
     if (streak == null) return;
 
+    final date = DateTime(savedDate.year, savedDate.month, savedDate.day);
     final today = DateTime.now();
-    final todayStr = today.toIso8601String().split('T').first;
-    if (streak.lastSavedDate != null &&
-        streak.lastSavedDate!.toIso8601String().split('T').first == todayStr) {
-      return; // already recorded for today
-    }
+    final todayDate = DateTime(today.year, today.month, today.day);
+    if (date.isAfter(todayDate)) return;
+    final dateStr = date.toIso8601String().split('T').first;
+    final lastDate = streak.lastSavedDate == null
+        ? null
+        : DateTime(streak.lastSavedDate!.year, streak.lastSavedDate!.month,
+            streak.lastSavedDate!.day);
+    if (lastDate != null && !date.isAfter(lastDate)) return;
 
-    final isConsecutive = streak.lastSavedDate != null &&
-        today.difference(streak.lastSavedDate!).inDays == 1;
+    final isConsecutive = lastDate != null && date.difference(lastDate).inDays == 1;
     final newStreak = isConsecutive ? streak.currentStreakDays + 1 : 1;
     final newLongest = newStreak > streak.longestStreak ? newStreak : streak.longestStreak;
 
@@ -42,7 +45,7 @@ class SavingStreakRepository {
       {
         'current_streak_days': newStreak,
         'longest_streak': newLongest,
-        'last_saved_date': todayStr,
+        'last_saved_date': dateStr,
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'user_id = ?',

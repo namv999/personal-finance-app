@@ -21,15 +21,20 @@ class BudgetListScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ngân sách · ${Formatters.monthYear(provider.selectedMonth)}'),
+        title:
+            Text('Ngân sách · ${Formatters.monthYear(provider.selectedMonth)}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: () => provider.load(month: DateTime(provider.selectedMonth.year, provider.selectedMonth.month - 1)),
+            onPressed: () => provider.load(
+                month: DateTime(provider.selectedMonth.year,
+                    provider.selectedMonth.month - 1)),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: () => provider.load(month: DateTime(provider.selectedMonth.year, provider.selectedMonth.month + 1)),
+            onPressed: () => provider.load(
+                month: DateTime(provider.selectedMonth.year,
+                    provider.selectedMonth.month + 1)),
           ),
         ],
       ),
@@ -39,7 +44,8 @@ class BudgetListScreen extends StatelessWidget {
               ? EmptyState(
                   icon: Icons.pie_chart_outline,
                   title: 'Chưa đặt ngân sách tháng này',
-                  subtitle: 'Đặt hạn mức chi tiêu theo danh mục để kiểm soát tài chính tốt hơn',
+                  subtitle:
+                      'Đặt hạn mức chi tiêu theo danh mục để kiểm soát tài chính tốt hơn',
                   actionLabel: 'Đặt ngân sách',
                   onAction: () => context.push(AppRoutes.budgetAdd),
                 )
@@ -60,16 +66,30 @@ class BudgetListScreen extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 16,
-                                  backgroundColor: colorFromHex(category?.color).withOpacity(0.15),
-                                  child: Icon(iconFromName(category?.icon), size: 16, color: colorFromHex(category?.color)),
+                                  backgroundColor: colorFromHex(category?.color)
+                                      .withValues(alpha: 0.15),
+                                  child: Icon(iconFromName(category?.icon),
+                                      size: 16,
+                                      color: colorFromHex(category?.color)),
                                 ),
                                 const SizedBox(width: 10),
-                                Expanded(child: Text(category?.categoryName ?? 'Danh mục', style: const TextStyle(fontWeight: FontWeight.w600))),
+                                Expanded(
+                                    child: Text(
+                                        category?.categoryName ?? 'Danh mục',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600))),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  icon: const Icon(Icons.delete_outline,
+                                      size: 20),
                                   onPressed: () async {
-                                    final confirmed = await confirmDelete(context, itemLabel: 'ngân sách ${category?.categoryName ?? ''}');
-                                    if (confirmed) await provider.deleteBudget(line.budget.id);
+                                    final confirmed = await confirmDelete(
+                                        context,
+                                        itemLabel:
+                                            'ngân sách ${category?.categoryName ?? ''}');
+                                    if (confirmed) {
+                                      await provider
+                                          .deleteBudget(line.budget.id);
+                                    }
                                   },
                                 ),
                               ],
@@ -81,17 +101,26 @@ class BudgetListScreen extends StatelessWidget {
                                 value: line.progress.clamp(0, 1).toDouble(),
                                 minHeight: 8,
                                 backgroundColor: AppColors.divider,
-                                color: line.isOverLimit ? AppColors.danger : AppColors.primary,
+                                color: line.isOverLimit
+                                    ? AppColors.danger
+                                    : AppColors.primary,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('${Formatters.currency(line.spent)} / ${Formatters.currency(line.budget.spendingLimit)}',
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                Text(
+                                    '${Formatters.currency(line.spent)} / ${Formatters.currency(line.budget.spendingLimit)}',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary)),
                                 if (line.isOverLimit)
-                                  const Text('Vượt hạn mức', style: TextStyle(fontSize: 12, color: AppColors.danger, fontWeight: FontWeight.w600)),
+                                  const Text('Vượt hạn mức',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.danger,
+                                          fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ],
@@ -100,7 +129,9 @@ class BudgetListScreen extends StatelessWidget {
                     );
                   },
                 ),
-      floatingActionButton: FloatingActionButton(onPressed: () => context.push(AppRoutes.budgetAdd), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push(AppRoutes.budgetAdd),
+          child: const Icon(Icons.add)),
     );
   }
 }

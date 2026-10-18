@@ -25,8 +25,8 @@ class Validators {
 
   static String? positiveAmount(String? value) {
     if (value == null || value.trim().isEmpty) return 'Vui lòng nhập số tiền';
-    final amount = num.tryParse(value.replaceAll(',', ''));
-    if (amount == null || amount <= 0) return 'Số tiền phải lớn hơn 0';
+    final amount = int.tryParse(value.replaceAll(',', ''));
+    if (amount == null || amount <= 0) return 'Nhập số nguyên lớn hơn 0';
     return null;
   }
 }

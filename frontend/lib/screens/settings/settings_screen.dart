@@ -22,21 +22,22 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => context.push(AppRoutes.profile),
           ),
           const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.cloud_sync_outlined),
-            title: const Text('Trạng thái đồng bộ'),
+          const ListTile(
+            leading: Icon(Icons.cloud_sync_outlined),
+            title: Text('Trạng thái đồng bộ'),
             subtitle: Text('Backend: ${ApiEndpoints.baseUrl}'),
           ),
           const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('Phiên bản'),
-            subtitle: const Text('1.0.0 (MVP · offline-first)'),
+          const ListTile(
+            leading: Icon(Icons.info_outline),
+            title: Text('Phiên bản'),
+            subtitle: Text('1.0.0 (MVP · offline-first)'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.danger),
-            title: const Text('Đăng xuất', style: TextStyle(color: AppColors.danger)),
+            title: const Text('Đăng xuất',
+                style: TextStyle(color: AppColors.danger)),
             onTap: () async {
               await context.read<AuthProvider>().logout();
             },

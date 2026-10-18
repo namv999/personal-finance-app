@@ -40,10 +40,21 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
   Widget build(BuildContext context) {
     final walletProvider = context.watch<WalletProvider>();
     final categories = context.watch<CategoryProvider>();
-    final wallet = walletProvider.wallets.where((w) => w.id == widget.walletId).firstOrNull;
+    final wallet = walletProvider.wallets
+        .where((w) => w.id == widget.walletId)
+        .firstOrNull;
 
     if (wallet == null) {
-      return const Scaffold(body: LoadingView());
+      return Scaffold(
+        appBar: AppBar(title: const Text('Ví không còn tồn tại')),
+        body: EmptyState(
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'Không tìm thấy ví',
+          subtitle: 'Ví này có thể đã bị xóa.',
+          actionLabel: 'Quay lại danh sách ví',
+          onAction: () => context.go(AppRoutes.wallets),
+        ),
+      );
     }
 
     return Scaffold(
@@ -62,26 +73,31 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             Card(
-              color: colorFromHex(wallet.color).withOpacity(0.1),
+              color: colorFromHex(wallet.color).withValues(alpha: 0.1),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Icon(iconFromName(wallet.icon), color: colorFromHex(wallet.color)),
+                      Icon(iconFromName(wallet.icon),
+                          color: colorFromHex(wallet.color)),
                       const SizedBox(width: 8),
-                      Text(wallet.walletType, style: const TextStyle(color: AppColors.textSecondary)),
+                      Text(wallet.walletType,
+                          style:
+                              const TextStyle(color: AppColors.textSecondary)),
                     ]),
                     const SizedBox(height: 8),
                     Text(Formatters.currency(wallet.currentBalance),
-                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+                        style: const TextStyle(
+                            fontSize: 28, fontWeight: FontWeight.w800)),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Lịch sử giao dịch', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Lịch sử giao dịch',
+                style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             if (_transactions == null)
               const Padding(padding: EdgeInsets.all(24), child: LoadingView())
@@ -97,20 +113,30 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: colorFromHex(categories.byId(tx.categoryId)?.color).withOpacity(0.15),
-                      child: Icon(iconFromName(categories.byId(tx.categoryId)?.icon),
-                          color: colorFromHex(categories.byId(tx.categoryId)?.color), size: 18),
+                      backgroundColor:
+                          colorFromHex(categories.byId(tx.categoryId)?.color)
+                              .withValues(alpha: 0.15),
+                      child: Icon(
+                          iconFromName(categories.byId(tx.categoryId)?.icon),
+                          color: colorFromHex(
+                              categories.byId(tx.categoryId)?.color),
+                          size: 18),
                     ),
-                    title: Text(categories.byId(tx.categoryId)?.categoryName ?? 'Không phân loại'),
-                    subtitle: Text('${Formatters.date(tx.transactionDate)}${tx.note != null ? ' · ${tx.note}' : ''}'),
+                    title: Text(categories.byId(tx.categoryId)?.categoryName ??
+                        'Không phân loại'),
+                    subtitle: Text(
+                        '${Formatters.date(tx.transactionDate)}${tx.note != null ? ' · ${tx.note}' : ''}'),
                     trailing: Text(
                       '${tx.type == CategoryType.income ? '+' : '-'}${Formatters.currency(tx.amount)}',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: tx.type == CategoryType.income ? AppColors.income : AppColors.expense,
+                        color: tx.type == CategoryType.income
+                            ? AppColors.income
+                            : AppColors.expense,
                       ),
                     ),
-                    onTap: () => context.push(AppRoutes.transactionEditPath(tx.id)),
+                    onTap: () =>
+                        context.push(AppRoutes.transactionEditPath(tx.id)),
                   ),
                 ),
           ],

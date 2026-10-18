@@ -72,8 +72,14 @@ class TransactionRepository {
   }
 
   Future<void> update(FinanceTransaction tx) async {
+    final existingRows = await _db.query(Tables.transactions,
+        columns: ['wallet_id'], where: 'id = ?', whereArgs: [tx.id], limit: 1);
+    final oldWalletId = existingRows.isEmpty ? null : existingRows.first['wallet_id'] as String?;
     await _db.update(Tables.transactions, tx.toMap(), where: 'id = ?', whereArgs: [tx.id]);
     await _sync.enqueue(tableName: Tables.transactions, recordId: tx.id, action: SyncAction.update);
+    if (oldWalletId != null && oldWalletId != tx.walletId) {
+      await _wallets.recomputeBalance(oldWalletId);
+    }
     await _wallets.recomputeBalance(tx.walletId);
   }
 

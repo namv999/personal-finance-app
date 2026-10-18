@@ -24,6 +24,18 @@ class BudgetRepository {
     required String month,
     required int spendingLimit,
   }) async {
+    // A category can have only one active budget per month. Update it when
+    // the user submits that category again instead of creating a duplicate.
+    if (id == null) {
+      final existing = await _db.query(
+        Tables.monthlyBudgets,
+        columns: ['id'],
+        where: 'user_id = ? AND category_id = ? AND month = ? AND is_deleted = 0',
+        whereArgs: [userId, categoryId, month],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) id = existing.first['id'] as String;
+    }
     final budget = MonthlyBudget(
       id: id ?? IdGenerator.next(),
       userId: userId,

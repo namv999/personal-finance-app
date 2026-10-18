@@ -35,6 +35,7 @@ class WalletRepository {
       walletName: walletName,
       walletType: walletType,
       currentBalance: initialBalance,
+      openingBalance: initialBalance,
       color: color,
       icon: icon,
       updatedAt: DateTime.now(),
@@ -81,7 +82,9 @@ class WalletRepository {
     final transferOut = (transferOutResult.first['total'] as int?) ?? 0;
     final transferIn = (transferInResult.first['total'] as int?) ?? 0;
 
-    final balance = income - expense - transferOut + transferIn;
+    final wallet = await getById(walletId);
+    if (wallet == null) return 0;
+    final balance = wallet.openingBalance + income - expense - transferOut + transferIn;
     await _db.update(Tables.wallets, {'current_balance': balance, 'updated_at': DateTime.now().toIso8601String()},
         where: 'id = ?', whereArgs: [walletId]);
     return balance;

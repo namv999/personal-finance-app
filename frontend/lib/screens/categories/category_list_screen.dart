@@ -19,7 +19,8 @@ class CategoryListScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Danh mục'),
-          bottom: const TabBar(tabs: [Tab(text: 'Chi tiêu'), Tab(text: 'Thu nhập')]),
+          bottom: const TabBar(
+              tabs: [Tab(text: 'Chi tiêu'), Tab(text: 'Thu nhập')]),
         ),
         body: provider.isLoading
             ? const LoadingView()
@@ -45,28 +46,39 @@ class _CategoryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (categories.isEmpty) {
-      return const Center(child: Text('Chưa có danh mục', style: TextStyle(color: AppColors.textSecondary)));
+      return const Center(
+          child: Text('Chưa có danh mục',
+              style: TextStyle(color: AppColors.textSecondary)));
     }
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.85),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.85),
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final c = categories[index];
         return InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: c.isSystemDefault ? null : () => context.push(AppRoutes.categoryEditPath(c.id)),
+          onTap: c.isSystemDefault
+              ? null
+              : () => context.push(AppRoutes.categoryEditPath(c.id)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircleAvatar(
                 radius: 26,
-                backgroundColor: colorFromHex(c.color).withOpacity(0.15),
+                backgroundColor: colorFromHex(c.color).withValues(alpha: 0.15),
                 child: Icon(iconFromName(c.icon), color: colorFromHex(c.color)),
               ),
               const SizedBox(height: 6),
-              Text(c.categoryName, style: const TextStyle(fontSize: 12), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(c.categoryName,
+                  style: const TextStyle(fontSize: 12),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ],
           ),
         );
