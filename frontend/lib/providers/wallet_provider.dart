@@ -4,12 +4,27 @@ import '../repositories/wallet_repository.dart';
 
 class WalletProvider extends ChangeNotifier {
   final WalletRepository _repo;
-  final String userId;
+  String userId;
   WalletProvider(this._repo, this.userId);
 
   List<Wallet> wallets = [];
   bool isLoading = false;
+  bool isLoaded = false;
   int totalBalance = 0;
+
+  void updateUser(String newUserId) {
+    if (userId != newUserId) {
+      userId = newUserId;
+      isLoaded = false;
+      wallets = [];
+      totalBalance = 0;
+      if (userId != '_none_') {
+        load();
+      } else {
+        notifyListeners();
+      }
+    }
+  }
 
   Future<void> load() async {
     isLoading = true;
@@ -17,6 +32,7 @@ class WalletProvider extends ChangeNotifier {
     wallets = await _repo.getAll(userId);
     totalBalance = await _repo.getTotalBalance(userId);
     isLoading = false;
+    isLoaded = true;
     notifyListeners();
   }
 
@@ -41,4 +57,7 @@ class WalletProvider extends ChangeNotifier {
     await _repo.delete(id);
     await load();
   }
+
+  Future<WalletDeletePreview> previewDelete(String id) =>
+      _repo.previewDelete(id);
 }

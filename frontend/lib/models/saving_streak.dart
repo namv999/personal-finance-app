@@ -1,3 +1,5 @@
+import '../core/utils/clock.dart';
+
 class SavingStreak {
   final String id;
   final String userId;
@@ -30,8 +32,8 @@ class SavingStreak {
         'user_id': userId,
         'current_streak_days': currentStreakDays,
         'longest_streak': longestStreak,
-        'last_saved_date': lastSavedDate?.toIso8601String().split('T').first,
-        'updated_at': updatedAt?.toIso8601String(),
+        'last_saved_date': lastSavedDate == null ? null : dateOnly(lastSavedDate!),
+        'updated_at': toUtcIsoN(updatedAt),
       };
 
   factory SavingStreak.fromJson(Map<String, dynamic> json) => SavingStreak(
@@ -49,7 +51,7 @@ class SavingStreak {
         'userId': userId,
         'currentStreakDays': currentStreakDays,
         'longestStreak': longestStreak,
-        'lastSavedDate': lastSavedDate?.toIso8601String().split('T').first,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'lastSavedDate': lastSavedDate == null ? null : dateOnly(lastSavedDate!),
+        'updatedAt': toUtcIsoN(updatedAt),
       };
 }

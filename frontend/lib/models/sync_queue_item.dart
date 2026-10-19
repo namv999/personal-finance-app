@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 enum SyncAction { create, update, delete }
 
 extension SyncActionX on SyncAction {
@@ -41,6 +44,6 @@ class SyncQueueItem {
         'record_id': recordId,
         'action': action.value,
         'is_synced': isSynced ? 1 : 0,
-        'created_at': createdAt.toIso8601String(),
+        'created_at': toUtcIso(createdAt),
       };
 }

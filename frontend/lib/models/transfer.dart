@@ -1,3 +1,5 @@
+import '../core/utils/clock.dart';
+
 /// Internal money movement between two of the user's own wallets.
 /// Deliberately NOT a transaction — moving money into a savings wallet is
 /// not "spending" and must never reduce the "total expense" figure.
@@ -46,9 +48,9 @@ class Transfer {
         'destination_wallet_id': destinationWalletId,
         'goal_id': goalId,
         'amount': amount,
-        'transfer_date': transferDate.toIso8601String().split('T').first,
+        'transfer_date': dateOnly(transferDate),
         'note': note,
-        'updated_at': updatedAt?.toIso8601String(),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -72,9 +74,9 @@ class Transfer {
         'destinationWalletId': destinationWalletId,
         'goalId': goalId,
         'amount': amount,
-        'transferDate': transferDate.toIso8601String().split('T').first,
+        'transferDate': dateOnly(transferDate),
         'note': note,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 }

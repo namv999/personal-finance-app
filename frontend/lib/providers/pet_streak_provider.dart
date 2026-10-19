@@ -19,10 +19,14 @@ class PetStreakProvider extends ChangeNotifier {
   Future<void> load() async {
     isLoading = true;
     notifyListeners();
-    pet = await _petRepo.getForUser(userId);
-    streak = await _streakRepo.getForUser(userId);
-    isLoading = false;
-    notifyListeners();
+    try {
+      await _streakRepo.recompute(userId);
+      pet = await _petRepo.getForUser(userId);
+      streak = await _streakRepo.getForUser(userId);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> renamePet(String newName) async {

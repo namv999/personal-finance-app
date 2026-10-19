@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 enum PetShape { small, medium, large }
 
 extension PetShapeX on PetShape {
@@ -55,7 +58,7 @@ class Pet {
         'level': level,
         'experience_points': experiencePoints,
         'shape': shape.value,
-        'updated_at': updatedAt?.toIso8601String(),
+        'updated_at': toUtcIsoN(updatedAt),
       };
 
   factory Pet.fromJson(Map<String, dynamic> json) => Pet(
@@ -75,7 +78,7 @@ class Pet {
         'level': level,
         'experiencePoints': experiencePoints,
         'shape': shape.value,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'updatedAt': toUtcIsoN(updatedAt),
       };
 
   Pet copyWith({String? petName, int? level, int? experiencePoints, PetShape? shape}) => Pet(
@@ -85,6 +88,6 @@ class Pet {
         level: level ?? this.level,
         experiencePoints: experiencePoints ?? this.experiencePoints,
         shape: shape ?? this.shape,
-        updatedAt: DateTime.now(),
+        updatedAt: nowUtc(),
       );
 }

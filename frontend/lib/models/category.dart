@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 enum CategoryType { income, expense }
 
 extension CategoryTypeX on CategoryType {
@@ -47,7 +50,7 @@ class TransactionCategory {
         'type': type.value,
         'color': color,
         'icon': icon,
-        'updated_at': updatedAt?.toIso8601String(),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -69,7 +72,7 @@ class TransactionCategory {
         'type': type.value,
         'color': color,
         'icon': icon,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 
@@ -87,7 +90,7 @@ class TransactionCategory {
         type: type ?? this.type,
         color: color ?? this.color,
         icon: icon ?? this.icon,
-        updatedAt: DateTime.now(),
+        updatedAt: nowUtc(),
         isDeleted: isDeleted ?? this.isDeleted,
       );
 }

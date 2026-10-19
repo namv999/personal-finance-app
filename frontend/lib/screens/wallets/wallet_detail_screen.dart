@@ -12,6 +12,7 @@ import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/icon_color_picker.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/wallet_delete_dialog.dart';
 
 class WalletDetailScreen extends StatefulWidget {
   final String walletId;
@@ -23,21 +24,24 @@ class WalletDetailScreen extends StatefulWidget {
 
 class _WalletDetailScreenState extends State<WalletDetailScreen> {
   List<FinanceTransaction>? _transactions;
+  Object? _seen;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final repo = context.read<TransactionProvider>();
-    await repo.load(walletId: widget.walletId);
-    setState(() => _transactions = repo.transactions);
+  Future<void> _reload() async {
+    final list = await context
+        .read<TransactionProvider>()
+        .fetchByWallet(widget.walletId);
+    if (mounted) setState(() => _transactions = list);
   }
 
   @override
   Widget build(BuildContext context) {
+    final shared = context.watch<TransactionProvider>().transactions;
+    if (!identical(shared, _seen)) {
+      _seen = shared;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reload();
+      });
+    }
     final walletProvider = context.watch<WalletProvider>();
     final categories = context.watch<CategoryProvider>();
     final wallet = walletProvider.wallets
@@ -65,10 +69,18 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => context.push(AppRoutes.walletEditPath(wallet.id)),
           ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => confirmAndDeleteWallet(
+              context,
+              walletId: wallet.id,
+              walletName: wallet.walletName,
+            ),
+          ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _reload,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [

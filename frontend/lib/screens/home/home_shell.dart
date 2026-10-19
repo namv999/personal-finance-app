@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_routes.dart';
+import '../../providers/wallet_provider.dart';
 import '../saving_goals/saving_goal_list_screen.dart';
 import '../transactions/transaction_list_screen.dart';
 import '../wallets/wallet_list_screen.dart';
@@ -26,16 +28,40 @@ class _HomeShellState extends State<HomeShell> {
     MoreMenuScreen(),
   ];
 
+  Widget? _buildFab(BuildContext context, bool hasWallets) {
+    switch (_index) {
+      case 0:
+      case 1:
+        if (!hasWallets) return null;
+        return FloatingActionButton(
+          key: const ValueKey('fab_transaction'),
+          onPressed: () => context.push(AppRoutes.transactionAdd),
+          child: const Icon(Icons.add),
+        );
+      case 2:
+        return FloatingActionButton(
+          key: const ValueKey('fab_wallet'),
+          onPressed: () => context.push(AppRoutes.walletAdd),
+          child: const Icon(Icons.add),
+        );
+      case 3:
+        return FloatingActionButton(
+          key: const ValueKey('fab_saving_goal'),
+          onPressed: () => context.push(AppRoutes.savingGoalAdd),
+          child: const Icon(Icons.add),
+        );
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasWallets = context.select<WalletProvider, bool>((p) => p.wallets.isNotEmpty);
+
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
-      floatingActionButton: _index == 1
-          ? FloatingActionButton(
-              onPressed: () => context.push(AppRoutes.transactionAdd),
-              child: const Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton: _buildFab(context, hasWallets),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),

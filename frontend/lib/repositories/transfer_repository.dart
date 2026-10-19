@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../core/database/db_helper.dart';
+import '../core/database/txn_ext.dart';
+import '../core/utils/clock.dart';
 import '../core/utils/id_generator.dart';
 import '../models/sync_queue_item.dart';
 import '../models/transfer.dart';
@@ -9,18 +11,14 @@ import 'sync_repository.dart';
 import 'wallet_repository.dart';
 
 class TransferRepository {
-  final Database _db;
-  late final SyncRepository _sync = SyncRepository(_db);
-  late final WalletRepository _wallets = WalletRepository(_db);
-  late final SavingGoalRepository _goals = SavingGoalRepository(_db);
-  late final SavingStreakRepository _streaks = SavingStreakRepository(_db);
+  final DatabaseExecutor _db;
   TransferRepository(this._db);
 
   Future<List<Transfer>> getAll(String userId, {int? limit}) async {
     final rows = await _db.query(Tables.transfers,
         where: 'user_id = ? AND is_deleted = 0',
         whereArgs: [userId],
-        orderBy: 'transfer_date DESC',
+        orderBy: 'transfer_date DESC, updated_at DESC',
         limit: limit);
     return rows.map(Transfer.fromMap).toList();
   }
@@ -34,9 +32,41 @@ class TransferRepository {
     required DateTime transferDate,
     String? note,
   }) async {
+    if (amount <= 0) throw Exception('Số tiền phải lớn hơn 0');
     if (sourceWalletId == destinationWalletId) {
       throw Exception('Ví nguồn và ví đích phải khác nhau');
     }
+    ensureNotFuture(transferDate);
+    return _db.inTxn((e) async {
+      final wallets = WalletRepository(e);
+      if (await wallets.getOwned(sourceWalletId, userId) == null ||
+          await wallets.getOwned(destinationWalletId, userId) == null) {
+        throw Exception('Ví không hợp lệ');
+      }
+      final balance = await wallets.recomputeBalance(sourceWalletId);
+      if (balance < amount) throw Exception('Số dư ví nguồn không đủ');
+
+      if (goalId != null) {
+        final goals = await e.query(Tables.savingGoals,
+            where: 'id = ? AND user_id = ? AND is_deleted = 0',
+            whereArgs: [goalId, userId],
+            limit: 1);
+        if (goals.isEmpty) throw Exception('Mục tiêu không hợp lệ');
+        final goalWalletId = goals.first['wallet_id'] as String?;
+        final isDeposit = goalWalletId == null || destinationWalletId == goalWalletId;
+        final isWithdraw = goalWalletId != null && sourceWalletId == goalWalletId;
+        if (!isDeposit && !isWithdraw) {
+          throw Exception('Chuyển tiền phải vào hoặc ra khỏi ví của mục tiêu');
+        }
+        if (isWithdraw) {
+          await SavingGoalRepository(e).recomputeSavedAmount(goalId);
+          final savedRows = await e.query(Tables.savingGoals,
+              columns: ['saved_amount'], where: 'id = ?', whereArgs: [goalId]);
+          if (amount > ((savedRows.first['saved_amount'] as int?) ?? 0)) {
+            throw Exception('Số tiền rút vượt quá tiến độ mục tiêu');
+          }
+        }
+      }
     final transfer = Transfer(
       id: IdGenerator.next(),
       userId: userId,
@@ -46,27 +76,44 @@ class TransferRepository {
       amount: amount,
       transferDate: transferDate,
       note: note,
-      updatedAt: DateTime.now(),
+      updatedAt: nowUtc(),
     );
-    await _db.insert(Tables.transfers, transfer.toMap());
-    await _sync.enqueue(tableName: Tables.transfers, recordId: transfer.id, action: SyncAction.create);
+    await e.insert(Tables.transfers, transfer.toMap());
+    await SyncRepository(e).enqueue(
+        tableName: Tables.transfers,
+        recordId: transfer.id,
+        action: SyncAction.create);
 
-    await _wallets.recomputeBalance(sourceWalletId);
-    await _wallets.recomputeBalance(destinationWalletId);
-    if (goalId != null) await _goals.recomputeSavedAmount(goalId);
-
-    // Transferring money into a savings wallet counts as "saving today".
-    await _streaks.markSaved(userId, transferDate);
-
-    return transfer;
+      await wallets.recomputeBalance(sourceWalletId);
+      await wallets.recomputeBalance(destinationWalletId);
+      if (goalId != null) {
+        await SavingGoalRepository(e).recomputeSavedAmount(goalId);
+      }
+      await SavingStreakRepository(e).recompute(userId);
+      return transfer;
+    });
   }
 
-  Future<void> delete(Transfer transfer) async {
-    await _db.update(Tables.transfers, {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
-        where: 'id = ?', whereArgs: [transfer.id]);
-    await _sync.enqueue(tableName: Tables.transfers, recordId: transfer.id, action: SyncAction.delete);
-    await _wallets.recomputeBalance(transfer.sourceWalletId);
-    await _wallets.recomputeBalance(transfer.destinationWalletId);
-    if (transfer.goalId != null) await _goals.recomputeSavedAmount(transfer.goalId!);
-  }
+  Future<void> delete(Transfer transfer) => _db.inTxn((e) async {
+    final rows = await e.query(Tables.transfers,
+        where: 'id = ? AND is_deleted = 0',
+        whereArgs: [transfer.id],
+        limit: 1);
+    if (rows.isEmpty) return;
+    final current = Transfer.fromMap(rows.first);
+    await e.update(Tables.transfers,
+        {'is_deleted': 1, 'updated_at': nowUtcIso()},
+        where: 'id = ?', whereArgs: [current.id]);
+    await SyncRepository(e).enqueue(
+        tableName: Tables.transfers,
+        recordId: current.id,
+        action: SyncAction.delete);
+    final wallets = WalletRepository(e);
+    await wallets.recomputeBalance(current.sourceWalletId);
+    await wallets.recomputeBalance(current.destinationWalletId);
+    if (current.goalId != null) {
+      await SavingGoalRepository(e).recomputeSavedAmount(current.goalId!);
+    }
+    await SavingStreakRepository(e).recompute(current.userId);
+  });
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/ledger_refresh.dart';
 import '../../providers/transfer_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/confirm_delete_dialog.dart';
@@ -19,7 +20,8 @@ class TransferListScreen extends StatelessWidget {
     final wallets = context.watch<WalletProvider>().wallets;
 
     String walletName(String id) =>
-        wallets.where((w) => w.id == id).map((w) => w.walletName).firstOrNull ?? 'Ví đã xóa';
+        wallets.where((w) => w.id == id).map((w) => w.walletName).firstOrNull ??
+        'Ví đã xóa';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Chuyển khoản')),
@@ -29,9 +31,14 @@ class TransferListScreen extends StatelessWidget {
               ? EmptyState(
                   icon: Icons.swap_horiz,
                   title: 'Chưa có giao dịch chuyển khoản',
-                  subtitle: 'Chuyển tiền giữa các ví, ví dụ để nạp vào ví tiết kiệm',
-                  actionLabel: 'Chuyển khoản',
-                  onAction: () => context.push(AppRoutes.transferAdd),
+                  subtitle:
+                      'Chuyển tiền giữa các ví, ví dụ để nạp vào ví tiết kiệm',
+                  actionLabel: wallets.length < 2
+                      ? (wallets.isEmpty ? 'Tạo ví' : 'Tạo thêm ví')
+                      : 'Chuyển khoản',
+                  onAction: () => context.push(wallets.length < 2
+                      ? AppRoutes.walletAdd
+                      : AppRoutes.transferAdd),
                 )
               : RefreshIndicator(
                   onRefresh: provider.load,
@@ -45,25 +52,41 @@ class TransferListScreen extends StatelessWidget {
                         child: ListTile(
                           leading: const CircleAvatar(
                             backgroundColor: Color(0x1A4C7DF0),
-                            child: Icon(Icons.swap_horiz, color: AppColors.transfer),
+                            child: Icon(Icons.swap_horiz,
+                                color: AppColors.transfer),
                           ),
-                          title: Text('${walletName(t.sourceWalletId)} → ${walletName(t.destinationWalletId)}'),
-                          subtitle: Text(Formatters.date(t.transferDate) + (t.note != null && t.note!.isNotEmpty ? ' · ${t.note}' : '')),
+                          title: Text(
+                              '${walletName(t.sourceWalletId)} → ${walletName(t.destinationWalletId)}'),
+                          subtitle: Text(Formatters.date(t.transferDate) +
+                              (t.note != null && t.note!.isNotEmpty
+                                  ? ' · ${t.note}'
+                                  : '')),
                           trailing: Text(Formatters.currency(t.amount),
-                              style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.transfer)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.transfer)),
                           onLongPress: () async {
-                            final confirmed = await confirmDelete(context, itemLabel: 'giao dịch chuyển khoản này');
-                            if (confirmed) await context.read<TransferProvider>().deleteTransfer(t);
+                            final transferProvider =
+                                context.read<TransferProvider>();
+                            final refresh = LedgerRefresh.of(context);
+                            final confirmed = await confirmDelete(context,
+                                itemLabel: 'giao dịch chuyển khoản này');
+                            if (confirmed) {
+                              await transferProvider.deleteTransfer(t);
+                              await refresh.run();
+                            }
                           },
                         ),
                       );
                     },
                   ),
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.transferAdd),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: wallets.length >= 2
+          ? FloatingActionButton(
+              onPressed: () => context.push(AppRoutes.transferAdd),
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

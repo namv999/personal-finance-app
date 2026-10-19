@@ -1,3 +1,5 @@
+import '../core/utils/clock.dart';
+
 enum GoalStatus { inProgress, completed, cancelled }
 
 extension GoalStatusX on GoalStatus {
@@ -75,9 +77,9 @@ class SavingGoal {
         'target_amount': targetAmount,
         'saved_amount': savedAmount,
         'expected_completion_date':
-            expectedCompletionDate?.toIso8601String().split('T').first,
+            expectedCompletionDate == null ? null : dateOnly(expectedCompletionDate!),
         'status': status.value,
-        'updated_at': updatedAt?.toIso8601String(),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -104,9 +106,9 @@ class SavingGoal {
         'targetAmount': targetAmount,
         'savedAmount': savedAmount,
         'expectedCompletionDate':
-            expectedCompletionDate?.toIso8601String().split('T').first,
+            expectedCompletionDate == null ? null : dateOnly(expectedCompletionDate!),
         'status': status.value,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 
@@ -128,7 +130,7 @@ class SavingGoal {
         savedAmount: savedAmount ?? this.savedAmount,
         expectedCompletionDate: expectedCompletionDate ?? this.expectedCompletionDate,
         status: status ?? this.status,
-        updatedAt: DateTime.now(),
+        updatedAt: nowUtc(),
         isDeleted: isDeleted ?? this.isDeleted,
       );
 }

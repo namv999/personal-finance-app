@@ -14,9 +14,15 @@ class AuthProvider extends ChangeNotifier {
   bool isLoading = false;
 
   Future<void> bootstrap() async {
-    final user = await _repo.getCurrentUser();
-    currentUser = user;
-    status = user != null ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+    try {
+      final user = await _repo.getCurrentUser();
+      currentUser = user;
+      status =
+          user != null ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+    } catch (_) {
+      currentUser = null;
+      status = AuthStatus.unauthenticated;
+    }
     notifyListeners();
   }
 
@@ -25,8 +31,10 @@ class AuthProvider extends ChangeNotifier {
         status = AuthStatus.authenticated;
       });
 
-  Future<bool> register(String fullName, String email, String password) => _guard(() async {
-        currentUser = await _repo.register(fullName: fullName, email: email, password: password);
+  Future<bool> register(String fullName, String email, String password) =>
+      _guard(() async {
+        currentUser = await _repo.register(
+            fullName: fullName, email: email, password: password);
         status = AuthStatus.authenticated;
       });
 
@@ -39,7 +47,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> updateProfile({String? fullName, int? monthlyIncome}) async {
     if (currentUser == null) return;
-    final updated = currentUser!.copyWith(fullName: fullName, monthlyIncome: monthlyIncome);
+    final updated =
+        currentUser!.copyWith(fullName: fullName, monthlyIncome: monthlyIncome);
     await _repo.updateProfile(updated);
     currentUser = updated;
     notifyListeners();

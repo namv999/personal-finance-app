@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 class Wallet {
   final String id;
   final String userId;
@@ -45,7 +48,7 @@ class Wallet {
         'opening_balance': openingBalance,
         'color': color,
         'icon': icon,
-        'updated_at': updatedAt?.toIso8601String(),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -71,7 +74,7 @@ class Wallet {
         'openingBalance': openingBalance,
         'color': color,
         'icon': icon,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 
@@ -93,7 +96,7 @@ class Wallet {
         openingBalance: openingBalance ?? this.openingBalance,
         color: color ?? this.color,
         icon: icon ?? this.icon,
-        updatedAt: DateTime.now(),
+        updatedAt: nowUtc(),
         isDeleted: isDeleted ?? this.isDeleted,
       );
 }

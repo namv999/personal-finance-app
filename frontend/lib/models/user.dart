@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 class AppUser {
   final String id;
   final String fullName;
@@ -36,8 +39,8 @@ class AppUser {
         'email': email,
         'password_hash': passwordHash,
         'monthly_income': monthlyIncome,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt?.toIso8601String(),
+        'created_at': toUtcIso(createdAt),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -57,8 +60,8 @@ class AppUser {
         'fullName': fullName,
         'email': email,
         'monthlyIncome': monthlyIncome,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt?.toIso8601String(),
+        'createdAt': toUtcIso(createdAt),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 
@@ -69,7 +72,7 @@ class AppUser {
         passwordHash: passwordHash,
         monthlyIncome: monthlyIncome ?? this.monthlyIncome,
         createdAt: createdAt,
-        updatedAt: DateTime.now(),
+        updatedAt: nowUtc(),
         isDeleted: isDeleted,
       );
 }

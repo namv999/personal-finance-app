@@ -19,7 +19,8 @@ class AppColors {
   static const Color textSecondary = Color(0xFF6B7280);
   static const Color divider = Color(0xFFE5E7EB);
   static const Color danger = Color(0xFFE0554F);
-  static const Color warning = Color(0xFFF2A65A);
+  static const Color warning = Color(0xFFF2B84B);
+  static const Color success = Color(0xFF2E9E5B);
 
   /// Default palette offered when a user picks a color for a wallet/category.
   static const List<Color> pickerPalette = [

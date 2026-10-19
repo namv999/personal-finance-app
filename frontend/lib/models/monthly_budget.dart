@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 class MonthlyBudget {
   final String id;
   final String userId;
@@ -33,7 +36,7 @@ class MonthlyBudget {
         'category_id': categoryId,
         'month': month,
         'spending_limit': spendingLimit,
-        'updated_at': updatedAt?.toIso8601String(),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -53,7 +56,7 @@ class MonthlyBudget {
         'categoryId': categoryId,
         'month': month,
         'spendingLimit': spendingLimit,
-        'updatedAt': updatedAt?.toIso8601String(),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 }

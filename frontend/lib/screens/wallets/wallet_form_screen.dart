@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/ledger_refresh.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/validators.dart';
 import '../../models/wallet.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/app_text_field.dart';
-import '../../widgets/confirm_delete_dialog.dart';
+import '../../widgets/wallet_delete_dialog.dart';
 import '../../widgets/icon_color_picker.dart';
 
 const _walletTypes = ['SPENDING', 'SAVINGS', 'CASH', 'BANK', 'E_WALLET'];
 
 class WalletFormScreen extends StatefulWidget {
   final String? walletId;
-  const WalletFormScreen({super.key, this.walletId});
+  final bool isRequired;
+  const WalletFormScreen({super.key, this.walletId, this.isRequired = false});
 
   @override
   State<WalletFormScreen> createState() => _WalletFormScreenState();
@@ -27,6 +30,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
   String? _icon = 'account_balance_wallet';
   String? _color = '#2E7D6B';
   Wallet? _editing;
+  bool _saving = false;
 
   bool get isEditing => widget.walletId != null;
 
@@ -38,15 +42,18 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
         final wallet = context
             .read<WalletProvider>()
             .wallets
-            .firstWhere((w) => w.id == widget.walletId);
-        setState(() {
-          _editing = wallet;
-          _nameController.text = wallet.walletName;
-          _balanceController.text = wallet.currentBalance.toString();
-          _walletType = wallet.walletType;
-          _icon = wallet.icon;
-          _color = wallet.color;
-        });
+            .where((w) => w.id == widget.walletId)
+            .firstOrNull;
+        if (wallet != null) {
+          setState(() {
+            _editing = wallet;
+            _nameController.text = wallet.walletName;
+            _balanceController.text = wallet.currentBalance.toString();
+            _walletType = wallet.walletType;
+            _icon = wallet.icon;
+            _color = wallet.color;
+          });
+        }
       });
     }
   }
@@ -59,10 +66,12 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
     final provider = context.read<WalletProvider>();
     try {
       if (isEditing && _editing != null) {
+        final refresh = LedgerRefresh.of(context);
         final updated = _editing!.copyWith(
           walletName: _nameController.text.trim(),
           walletType: _walletType,
@@ -70,6 +79,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
           color: _color,
         );
         await provider.editWallet(updated);
+        await refresh.run();
       } else {
         await provider.addWallet(
           name: _nameController.text.trim(),
@@ -80,35 +90,44 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
           color: _color,
         );
       }
-      if (mounted) context.pop();
+      if (mounted) {
+        if (widget.isRequired) {
+          context.go(AppRoutes.home);
+        } else {
+          context.pop();
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _delete() async {
     if (_editing == null) return;
-    final confirmed =
-        await confirmDelete(context, itemLabel: _editing!.walletName);
-    if (confirmed) {
-      await context.read<WalletProvider>().deleteWallet(_editing!.id);
-      // This form is opened from the wallet detail page. Popping only this
-      // route would reveal the deleted wallet's detail page, which has no
-      // wallet to render. Replace the stack with the wallet list instead.
-      if (mounted) context.go(AppRoutes.wallets);
-    }
+    await confirmAndDeleteWallet(
+      context,
+      walletId: _editing!.id,
+      walletName: _editing!.walletName,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final title = widget.isRequired
+        ? 'Tạo ví đầu tiên'
+        : (isEditing ? 'Sửa ví' : 'Tạo ví mới');
+
+    final content = Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Sửa ví' : 'Tạo ví mới'),
+        title: Text(title),
+        automaticallyImplyLeading: !widget.isRequired,
         actions: [
-          if (isEditing)
+          if (isEditing && !widget.isRequired)
             IconButton(
                 icon: const Icon(Icons.delete_outline), onPressed: _delete),
         ],
@@ -120,6 +139,31 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.isRequired) ...[
+                Card(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  child: const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: AppColors.primary),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Bạn chưa có ví nào. Hãy tạo chiếc ví đầu tiên để bắt đầu theo dõi thu chi và quản lý tài chính nhé!',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               AppTextField(
                 label: 'Tên ví',
                 controller: _nameController,
@@ -151,12 +195,19 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                  onPressed: _submit,
-                  child: Text(isEditing ? 'Lưu thay đổi' : 'Tạo ví')),
+                  onPressed: _saving ? null : _submit,
+                  child: Text(widget.isRequired
+                      ? 'Tạo ví & Bắt đầu'
+                      : (isEditing ? 'Lưu thay đổi' : 'Tạo ví'))),
             ],
           ),
         ),
       ),
     );
+
+    if (widget.isRequired) {
+      return PopScope(canPop: false, child: content);
+    }
+    return content;
   }
 }

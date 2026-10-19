@@ -6,6 +6,7 @@ import '../../core/constants/app_routes.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../widgets/budget_status_bar.dart';
 import '../../widgets/confirm_delete_dialog.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/icon_color_picker.dart';
@@ -49,85 +50,116 @@ class BudgetListScreen extends StatelessWidget {
                   actionLabel: 'Đặt ngân sách',
                   onAction: () => context.push(AppRoutes.budgetAdd),
                 )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: provider.lines.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final line = provider.lines[index];
-                    final category = categories.byId(line.budget.categoryId);
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: colorFromHex(category?.color)
-                                      .withValues(alpha: 0.15),
-                                  child: Icon(iconFromName(category?.icon),
-                                      size: 16,
-                                      color: colorFromHex(category?.color)),
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Tổng ngân sách tháng',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                    child: Text(
-                                        category?.categoryName ?? 'Danh mục',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600))),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 20),
-                                  onPressed: () async {
-                                    final confirmed = await confirmDelete(
-                                        context,
-                                        itemLabel:
-                                            'ngân sách ${category?.categoryName ?? ''}');
-                                    if (confirmed) {
-                                      await provider
-                                          .deleteBudget(line.budget.id);
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: line.progress.clamp(0, 1).toDouble(),
-                                minHeight: 8,
-                                backgroundColor: AppColors.divider,
-                                color: line.isOverLimit
-                                    ? AppColors.danger
-                                    : AppColors.primary,
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Các danh mục đã đặt ngân sách',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${Formatters.currency(provider.totalSpent)} / ${Formatters.currency(provider.totalLimit)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              BudgetStatusBar(status: provider.overallStatus),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                        itemCount: provider.lines.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final line = provider.lines[index];
+                          final category =
+                              categories.byId(line.budget.categoryId);
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor:
+                                            colorFromHex(category?.color)
+                                                .withValues(alpha: 0.15),
+                                        child: Icon(
+                                            iconFromName(category?.icon),
+                                            size: 16,
+                                            color:
+                                                colorFromHex(category?.color)),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                          child: Text(
+                                              category?.categoryName ??
+                                                  'Danh mục',
+                                              style: const TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.w600))),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline,
+                                            size: 20),
+                                        onPressed: () async {
+                                          final confirmed =
+                                              await confirmDelete(context,
+                                                  itemLabel:
+                                                      'ngân sách ${category?.categoryName ?? ''}');
+                                          if (confirmed) {
+                                            await provider
+                                                .deleteBudget(line.budget.id);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
                                     '${Formatters.currency(line.spent)} / ${Formatters.currency(line.budget.spendingLimit)}',
                                     style: const TextStyle(
                                         fontSize: 12,
-                                        color: AppColors.textSecondary)),
-                                if (line.isOverLimit)
-                                  const Text('Vượt hạn mức',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.danger,
-                                          fontWeight: FontWeight.w600)),
-                              ],
+                                        color: AppColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  BudgetStatusBar(status: line.status),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
       floatingActionButton: FloatingActionButton(
           onPressed: () => context.push(AppRoutes.budgetAdd),

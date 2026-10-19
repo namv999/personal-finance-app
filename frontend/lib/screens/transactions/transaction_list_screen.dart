@@ -8,6 +8,7 @@ import '../../models/category.dart';
 import '../../models/transaction.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/icon_color_picker.dart';
 import '../../widgets/loading_view.dart';
@@ -20,6 +21,7 @@ class TransactionListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<TransactionProvider>();
     final categories = context.watch<CategoryProvider>();
+    final wallets = context.watch<WalletProvider>().wallets;
 
     final body = provider.isLoading
         ? const LoadingView()
@@ -27,9 +29,14 @@ class TransactionListScreen extends StatelessWidget {
             ? EmptyState(
                 icon: Icons.receipt_long_outlined,
                 title: 'Chưa có giao dịch',
-                subtitle: 'Ghi lại khoản thu/chi đầu tiên của bạn',
-                actionLabel: 'Thêm giao dịch',
-                onAction: () => context.push(AppRoutes.transactionAdd),
+                subtitle: wallets.isEmpty
+                    ? 'Bạn cần tạo ví trước khi thêm giao dịch'
+                    : 'Ghi lại khoản thu/chi đầu tiên của bạn',
+                actionLabel:
+                    wallets.isEmpty ? 'Tạo ví' : 'Thêm giao dịch',
+                onAction: () => context.push(wallets.isEmpty
+                    ? AppRoutes.walletAdd
+                    : AppRoutes.transactionAdd),
               )
             : RefreshIndicator(
                 onRefresh: () => provider.load(),
@@ -40,8 +47,22 @@ class TransactionListScreen extends StatelessWidget {
                 ),
               );
 
-    if (!embedded) return body;
-    return Scaffold(appBar: AppBar(title: const Text('Giao dịch')), body: body);
+    if (embedded) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Giao dịch')),
+        body: body,
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Giao dịch')),
+      body: body,
+      floatingActionButton: wallets.isNotEmpty
+          ? FloatingActionButton(
+              onPressed: () => context.push(AppRoutes.transactionAdd),
+              child: const Icon(Icons.add),
+            )
+          : null,
+    );
   }
 
   List<Widget> _groupByDate(List<FinanceTransaction> transactions,

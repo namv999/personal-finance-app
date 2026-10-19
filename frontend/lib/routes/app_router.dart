@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants/app_routes.dart';
 import '../providers/auth_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../screens/ai_suggestions/ai_suggestion_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -28,73 +29,113 @@ import '../screens/wallets/wallet_list_screen.dart';
 
 /// Central route table. Each path corresponds 1:1 with the future Spring
 /// Boot REST resource of the same name (see [AppRoutes] docs).
-GoRouter buildRouter(AuthProvider authProvider) {
+GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    refreshListenable: authProvider,
+    refreshListenable: Listenable.merge([authProvider, walletProvider]),
     redirect: (context, state) {
       final loggingIn = state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.register;
       final atSplash = state.matchedLocation == AppRoutes.splash;
+      final atRequired =
+          state.matchedLocation == AppRoutes.walletCreateRequired;
 
-      if (authProvider.status == AuthStatus.unknown) return atSplash ? null : AppRoutes.splash;
+      if (authProvider.status == AuthStatus.unknown) {
+        return atSplash ? null : AppRoutes.splash;
+      }
       if (authProvider.status == AuthStatus.unauthenticated) {
         return loggingIn ? null : AppRoutes.login;
       }
       // Authenticated:
+      if (walletProvider.isLoaded && walletProvider.wallets.isEmpty) {
+        return atRequired ? null : AppRoutes.walletCreateRequired;
+      }
+      if (walletProvider.isLoaded &&
+          walletProvider.wallets.isNotEmpty &&
+          atRequired) {
+        return AppRoutes.home;
+      }
       if (loggingIn || atSplash) return AppRoutes.home;
       return null;
     },
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (c, s) => const SplashScreen()),
       GoRoute(path: AppRoutes.login, builder: (c, s) => const LoginScreen()),
-      GoRoute(path: AppRoutes.register, builder: (c, s) => const RegisterScreen()),
-
+      GoRoute(
+          path: AppRoutes.register, builder: (c, s) => const RegisterScreen()),
       GoRoute(path: AppRoutes.home, builder: (c, s) => const HomeShell()),
-
-      GoRoute(path: AppRoutes.wallets, builder: (c, s) => const WalletListScreen()),
-      GoRoute(path: AppRoutes.walletAdd, builder: (c, s) => const WalletFormScreen()),
+      GoRoute(
+          path: AppRoutes.wallets, builder: (c, s) => const WalletListScreen()),
+      GoRoute(
+          path: AppRoutes.walletAdd,
+          builder: (c, s) => const WalletFormScreen()),
+      GoRoute(
+        path: AppRoutes.walletCreateRequired,
+        builder: (c, s) => const WalletFormScreen(isRequired: true),
+      ),
       GoRoute(
         path: AppRoutes.walletEdit,
         builder: (c, s) => WalletFormScreen(walletId: s.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.walletDetail,
-        builder: (c, s) => WalletDetailScreen(walletId: s.pathParameters['id']!),
+        builder: (c, s) =>
+            WalletDetailScreen(walletId: s.pathParameters['id']!),
       ),
-
-      GoRoute(path: AppRoutes.categories, builder: (c, s) => const CategoryListScreen()),
-      GoRoute(path: AppRoutes.categoryAdd, builder: (c, s) => const CategoryFormScreen()),
+      GoRoute(
+          path: AppRoutes.categories,
+          builder: (c, s) => const CategoryListScreen()),
+      GoRoute(
+          path: AppRoutes.categoryAdd,
+          builder: (c, s) => const CategoryFormScreen()),
       GoRoute(
         path: AppRoutes.categoryEdit,
-        builder: (c, s) => CategoryFormScreen(categoryId: s.pathParameters['id']),
+        builder: (c, s) =>
+            CategoryFormScreen(categoryId: s.pathParameters['id']),
       ),
-
-      GoRoute(path: AppRoutes.transactions, builder: (c, s) => const TransactionListScreen()),
-      GoRoute(path: AppRoutes.transactionAdd, builder: (c, s) => const TransactionFormScreen()),
+      GoRoute(
+          path: AppRoutes.transactions,
+          builder: (c, s) => const TransactionListScreen()),
+      GoRoute(
+          path: AppRoutes.transactionAdd,
+          builder: (c, s) => const TransactionFormScreen()),
       GoRoute(
         path: AppRoutes.transactionEdit,
-        builder: (c, s) => TransactionFormScreen(transactionId: s.pathParameters['id']),
+        builder: (c, s) =>
+            TransactionFormScreen(transactionId: s.pathParameters['id']),
       ),
-
-      GoRoute(path: AppRoutes.transfers, builder: (c, s) => const TransferListScreen()),
-      GoRoute(path: AppRoutes.transferAdd, builder: (c, s) => const TransferFormScreen()),
-
-      GoRoute(path: AppRoutes.savingGoals, builder: (c, s) => const SavingGoalListScreen()),
-      GoRoute(path: AppRoutes.savingGoalAdd, builder: (c, s) => const SavingGoalFormScreen()),
+      GoRoute(
+          path: AppRoutes.transfers,
+          builder: (c, s) => const TransferListScreen()),
+      GoRoute(
+        path: AppRoutes.transferAdd,
+        builder: (c, s) =>
+            TransferFormScreen(goalId: s.uri.queryParameters['goalId']),
+      ),
+      GoRoute(
+          path: AppRoutes.savingGoals,
+          builder: (c, s) => const SavingGoalListScreen()),
+      GoRoute(
+          path: AppRoutes.savingGoalAdd,
+          builder: (c, s) => const SavingGoalFormScreen()),
       GoRoute(
         path: AppRoutes.savingGoalDetail,
-        builder: (c, s) => SavingGoalDetailScreen(goalId: s.pathParameters['id']!),
+        builder: (c, s) =>
+            SavingGoalDetailScreen(goalId: s.pathParameters['id']!),
       ),
-
-      GoRoute(path: AppRoutes.budgets, builder: (c, s) => const BudgetListScreen()),
-      GoRoute(path: AppRoutes.budgetAdd, builder: (c, s) => const BudgetFormScreen()),
-
+      GoRoute(
+          path: AppRoutes.budgets, builder: (c, s) => const BudgetListScreen()),
+      GoRoute(
+          path: AppRoutes.budgetAdd,
+          builder: (c, s) => const BudgetFormScreen()),
       GoRoute(path: AppRoutes.pet, builder: (c, s) => const PetScreen()),
-      GoRoute(path: AppRoutes.aiSuggestions, builder: (c, s) => const AiSuggestionScreen()),
-
-      GoRoute(path: AppRoutes.settings, builder: (c, s) => const SettingsScreen()),
-      GoRoute(path: AppRoutes.profile, builder: (c, s) => const ProfileScreen()),
+      GoRoute(
+          path: AppRoutes.aiSuggestions,
+          builder: (c, s) => const AiSuggestionScreen()),
+      GoRoute(
+          path: AppRoutes.settings, builder: (c, s) => const SettingsScreen()),
+      GoRoute(
+          path: AppRoutes.profile, builder: (c, s) => const ProfileScreen()),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(child: Text('Không tìm thấy trang: ${state.uri}')),

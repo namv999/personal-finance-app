@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/clock.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/ledger_refresh.dart';
 import '../../core/utils/validators.dart';
 import '../../models/category.dart';
 import '../../models/transaction.dart';
@@ -26,8 +28,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   CategoryType _type = CategoryType.expense;
   String? _walletId;
   String? _categoryId;
-  DateTime _date = DateTime.now();
+  DateTime _date = DateTime.parse(businessToday());
   FinanceTransaction? _editing;
+  bool _saving = false;
 
   bool get isEditing => widget.transactionId != null;
 
@@ -67,18 +70,24 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<void> _pickDate() async {
+    final today = DateTime.parse(businessToday());
+    final initial = _date.isAfter(today) ? today : _date;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date,
+      initialDate: initial,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      lastDate: today,
     );
     if (picked != null) setState(() => _date = picked);
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _walletId == null) return;
+    if (_saving || !_formKey.currentState!.validate() || _walletId == null) {
+      return;
+    }
+    setState(() => _saving = true);
     final provider = context.read<TransactionProvider>();
+    final refresh = LedgerRefresh.of(context);
     final amount = int.parse(_amountController.text.replaceAll(',', ''));
 
     try {
@@ -101,22 +110,27 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           date: _date,
         );
       }
+      await refresh.run();
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _delete() async {
     if (_editing == null) return;
+    final transactionProvider = context.read<TransactionProvider>();
+    final refresh = LedgerRefresh.of(context);
     final confirmed = await confirmDelete(context, itemLabel: 'giao dịch này');
-    if (confirmed) {
-      await context
-          .read<TransactionProvider>()
-          .deleteTransaction(_editing!.id, _editing!.walletId);
+    if (confirmed && mounted) {
+      await transactionProvider.deleteTransaction(
+          _editing!.id, _editing!.walletId);
+      await refresh.run();
       if (mounted) context.pop();
     }
   }
@@ -204,7 +218,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   maxLines: 2),
               const SizedBox(height: 24),
               ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: _saving ? null : _submit,
                   child: Text(isEditing ? 'Lưu thay đổi' : 'Thêm giao dịch')),
             ],
           ),

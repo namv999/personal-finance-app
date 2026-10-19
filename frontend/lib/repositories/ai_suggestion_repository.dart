@@ -1,3 +1,4 @@
+import '../core/utils/clock.dart';
 import 'package:sqflite/sqflite.dart';
 import '../core/database/db_helper.dart';
 import '../core/utils/id_generator.dart';
@@ -7,12 +8,14 @@ import '../models/ai_suggestion.dart';
 /// server-side (Spring Boot + an LLM call) — this repo caches results
 /// locally and exposes a stub for fetching new ones.
 class AiSuggestionRepository {
-  final Database _db;
+  final DatabaseExecutor _db;
   AiSuggestionRepository(this._db);
 
   Future<List<AiSuggestion>> getForMonth(String userId, String yyyyMM) async {
     final rows = await _db.query(Tables.aiSuggestions,
-        where: 'user_id = ? AND month = ?', whereArgs: [userId, yyyyMM], orderBy: 'created_at DESC');
+        where: 'user_id = ? AND month = ?',
+        whereArgs: [userId, yyyyMM],
+        orderBy: 'created_at DESC');
     return rows.map(AiSuggestion.fromMap).toList();
   }
 
@@ -30,7 +33,7 @@ class AiSuggestionRepository {
       month: yyyyMM,
       suggestionContent:
           'Kết nối backend để nhận gợi ý tài chính được tạo bởi AI dựa trên chi tiêu tháng này.',
-      createdAt: DateTime.now(),
+      createdAt: nowUtc(),
     );
     await _db.insert(Tables.aiSuggestions, suggestion.toMap());
     return suggestion;

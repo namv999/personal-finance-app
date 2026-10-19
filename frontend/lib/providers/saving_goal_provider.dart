@@ -13,9 +13,12 @@ class SavingGoalProvider extends ChangeNotifier {
   Future<void> load() async {
     isLoading = true;
     notifyListeners();
-    goals = await _repo.getAll(userId);
-    isLoading = false;
-    notifyListeners();
+    try {
+      goals = await _repo.getAll(userId);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addGoal({

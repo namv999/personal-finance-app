@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/clock.dart';
+import '../../core/utils/ledger_refresh.dart';
 import '../../models/category.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/category_provider.dart';
@@ -31,11 +33,7 @@ class HomeScreen extends StatelessWidget {
         title: Text('Xin chào, $userName 👋'),
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await context.read<WalletProvider>().load();
-          await context.read<TransactionProvider>().load();
-          await context.read<PetStreakProvider>().load();
-        },
+        onRefresh: () => LedgerRefresh.all(context).run(),
         child: walletProvider.isLoading
             ? const LoadingView()
             : ListView(
@@ -235,7 +233,7 @@ class _SpendingByCategoryCard extends StatelessWidget {
     final categoryProvider = context.watch<CategoryProvider>();
 
     return FutureBuilder<Map<String, int>>(
-      future: txProvider.expenseByCategoryForMonth(DateTime.now()),
+      future: txProvider.expenseByCategoryForMonth(DateTime.parse(businessToday())),
       builder: (context, snapshot) {
         final data = snapshot.data ?? {};
         final entries = data.entries.where((e) => e.value > 0).toList()

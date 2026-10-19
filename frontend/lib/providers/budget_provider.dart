@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import '../core/utils/budget_status.dart';
+import '../core/utils/clock.dart';
 import '../core/utils/formatters.dart';
 import '../models/monthly_budget.dart';
 import '../repositories/budget_repository.dart';
@@ -8,8 +10,8 @@ class BudgetLine {
   final MonthlyBudget budget;
   final int spent;
   BudgetLine(this.budget, this.spent);
-  double get progress => budget.spendingLimit <= 0 ? 0 : (spent / budget.spendingLimit).clamp(0, 1.5);
-  bool get isOverLimit => spent > budget.spendingLimit;
+  BudgetStatus get status => budgetStatusOf(spent, budget.spendingLimit);
+  bool get isOverLimit => status.level == BudgetLevel.exceeded;
 }
 
 class BudgetProvider extends ChangeNotifier {
@@ -20,20 +22,26 @@ class BudgetProvider extends ChangeNotifier {
 
   List<BudgetLine> lines = [];
   bool isLoading = false;
-  DateTime selectedMonth = DateTime.now();
+  DateTime selectedMonth = DateTime.parse(businessToday());
+
+  int get totalLimit => lines.fold<int>(0, (sum, line) => sum + line.budget.spendingLimit);
+  int get totalSpent => lines.fold<int>(0, (sum, line) => sum + line.spent);
+  BudgetStatus get overallStatus => budgetStatusOf(totalSpent, totalLimit);
 
   Future<void> load({DateTime? month}) async {
     selectedMonth = month ?? selectedMonth;
     isLoading = true;
     notifyListeners();
 
-    final yyyyMM = Formatters.yyyyMM(selectedMonth);
-    final budgets = await _repo.getForMonth(userId, yyyyMM);
-    final spentByCategory = await _txRepo.getExpenseByCategory(userId, yyyyMM);
-
-    lines = budgets.map((b) => BudgetLine(b, spentByCategory[b.categoryId] ?? 0)).toList();
-    isLoading = false;
-    notifyListeners();
+    try {
+      final yyyyMM = Formatters.yyyyMM(selectedMonth);
+      final budgets = await _repo.getForMonth(userId, yyyyMM);
+      final spentByCategory = await _txRepo.getExpenseByCategory(userId, yyyyMM);
+      lines = budgets.map((b) => BudgetLine(b, spentByCategory[b.categoryId] ?? 0)).toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> setBudget({String? id, required String categoryId, required int limit}) async {

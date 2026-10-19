@@ -8,7 +8,10 @@ class CategoryProvider extends ChangeNotifier {
   CategoryProvider(this._repo, this.userId);
 
   List<TransactionCategory> categories = [];
+  List<TransactionCategory> _displayCategories = [];
   bool isLoading = false;
+  String? error;
+  bool _loaded = false;
 
   List<TransactionCategory> get incomeCategories =>
       categories.where((c) => c.type == CategoryType.income).toList();
@@ -16,15 +19,31 @@ class CategoryProvider extends ChangeNotifier {
       categories.where((c) => c.type == CategoryType.expense).toList();
 
   Future<void> load() async {
-    isLoading = true;
-    notifyListeners();
-    categories = await _repo.getAll(userId);
-    isLoading = false;
-    notifyListeners();
+    if (!_loaded) {
+      isLoading = true;
+      notifyListeners();
+    }
+    try {
+      _displayCategories = await _repo.getAllForDisplay(userId);
+      categories = _displayCategories.where((c) => !c.isDeleted).toList();
+      _loaded = true;
+      error = null;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<void> addCategory(String name, CategoryType type, {String? color, String? icon}) async {
-    await _repo.create(userId: userId, categoryName: name, type: type, color: color, icon: icon);
+  Future<void> addCategory(String name, CategoryType type,
+      {String? color, String? icon}) async {
+    await _repo.create(
+        userId: userId,
+        categoryName: name,
+        type: type,
+        color: color,
+        icon: icon);
     await load();
   }
 
@@ -40,7 +59,7 @@ class CategoryProvider extends ChangeNotifier {
 
   TransactionCategory? byId(String? id) {
     if (id == null) return null;
-    for (final c in categories) {
+    for (final c in _displayCategories) {
       if (c.id == id) return c;
     }
     return null;

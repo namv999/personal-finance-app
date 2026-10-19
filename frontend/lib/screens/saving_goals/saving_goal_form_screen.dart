@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/utils/clock.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/ledger_refresh.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/saving_goal_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -19,6 +22,7 @@ class _SavingGoalFormScreenState extends State<SavingGoalFormScreen> {
   final _targetController = TextEditingController();
   String? _walletId;
   DateTime? _expectedDate;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -28,29 +32,35 @@ class _SavingGoalFormScreenState extends State<SavingGoalFormScreen> {
   }
 
   Future<void> _pickDate() async {
+    final today = DateTime.parse(businessToday());
     final picked = await showDatePicker(
         context: context,
-        initialDate: DateTime.now().add(const Duration(days: 30)),
-        firstDate: DateTime.now(),
+        initialDate: today.add(const Duration(days: 30)),
+        firstDate: today,
         lastDate: DateTime(2100));
     if (picked != null) setState(() => _expectedDate = picked);
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
     try {
+      final refresh = LedgerRefresh.of(context);
       await context.read<SavingGoalProvider>().addGoal(
-          walletId: _walletId,
-          name: _nameController.text.trim(),
-          targetAmount: int.parse(_targetController.text.replaceAll(',', '')),
-          expectedDate: _expectedDate,
-        );
+            walletId: _walletId,
+            name: _nameController.text.trim(),
+            targetAmount: int.parse(_targetController.text.replaceAll(',', '')),
+            expectedDate: _expectedDate,
+          );
+      await refresh.run();
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -91,6 +101,17 @@ class _SavingGoalFormScreenState extends State<SavingGoalFormScreen> {
                   ],
                   onChanged: (v) => setState(() => _walletId = v),
                 ),
+              if (wallets.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    'Tiến độ chỉ tính các khoản chuyển vào mục tiêu.',
+                    style:
+                        TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               AppTextField(
                 label: 'Ngày dự kiến hoàn thành (tùy chọn)',
@@ -104,7 +125,8 @@ class _SavingGoalFormScreenState extends State<SavingGoalFormScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                  onPressed: _submit, child: const Text('Tạo mục tiêu')),
+                  onPressed: _saving ? null : _submit,
+                  child: const Text('Tạo mục tiêu')),
             ],
           ),
         ),

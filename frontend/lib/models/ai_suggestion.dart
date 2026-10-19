@@ -1,3 +1,6 @@
+import '../core/utils/clock.dart';
+
+
 class AiSuggestion {
   final String id;
   final String userId;
@@ -26,7 +29,7 @@ class AiSuggestion {
         'user_id': userId,
         'month': month,
         'suggestion_content': suggestionContent,
-        'created_at': createdAt.toIso8601String(),
+        'created_at': toUtcIso(createdAt),
       };
 
   factory AiSuggestion.fromJson(Map<String, dynamic> json) => AiSuggestion(
@@ -42,6 +45,6 @@ class AiSuggestion {
         'userId': userId,
         'month': month,
         'suggestionContent': suggestionContent,
-        'createdAt': createdAt.toIso8601String(),
+        'createdAt': toUtcIso(createdAt),
       };
 }

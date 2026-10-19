@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/ledger_refresh.dart';
 import '../../models/saving_goal.dart';
 import '../../providers/saving_goal_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../widgets/confirm_delete_dialog.dart';
 import '../../widgets/loading_view.dart';
 
@@ -18,38 +20,36 @@ class SavingGoalDetailScreen extends StatefulWidget {
 }
 
 class _SavingGoalDetailScreenState extends State<SavingGoalDetailScreen> {
-  SavingGoal? _goal;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final goal = await context.read<SavingGoalProvider>().refresh(widget.goalId);
-    setState(() => _goal = goal);
-  }
-
-  Future<void> _delete() async {
-    if (_goal == null) return;
-    final confirmed = await confirmDelete(context, itemLabel: _goal!.goalName);
-    if (confirmed) {
-      await context.read<SavingGoalProvider>().deleteGoal(_goal!.id);
+  Future<void> _delete(SavingGoal goal) async {
+    final goalProvider = context.read<SavingGoalProvider>();
+    final confirmed = await confirmDelete(context, itemLabel: goal.goalName);
+    if (confirmed && mounted) {
+      final refresh = LedgerRefresh.of(context);
+      await goalProvider.deleteGoal(goal.id);
+      await refresh.run();
       if (mounted) context.pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final goal = _goal;
+    final provider = context.watch<SavingGoalProvider>();
+    final goal = provider.goals.where((g) => g.id == widget.goalId).firstOrNull;
     return Scaffold(
       appBar: AppBar(
         title: Text(goal?.goalName ?? ''),
-        actions: [IconButton(icon: const Icon(Icons.delete_outline), onPressed: _delete)],
+        actions: [
+          if (goal != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _delete(goal),
+            ),
+        ],
       ),
       body: goal == null
-          ? const LoadingView()
+          ? (provider.isLoading
+              ? const LoadingView()
+              : const Center(child: Text('Mục tiêu không tồn tại')))
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
@@ -71,21 +71,43 @@ class _SavingGoalDetailScreenState extends State<SavingGoalDetailScreen> {
                           ),
                         ),
                         Text('${(goal.progress * 100).toStringAsFixed(0)}%',
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+                            style: const TextStyle(
+                                fontSize: 28, fontWeight: FontWeight.w800)),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                _InfoRow(label: 'Đã tiết kiệm', value: Formatters.currency(goal.savedAmount)),
-                _InfoRow(label: 'Mục tiêu', value: Formatters.currency(goal.targetAmount)),
-                _InfoRow(label: 'Còn thiếu', value: Formatters.currency((goal.targetAmount - goal.savedAmount).clamp(0, goal.targetAmount))),
+                _InfoRow(
+                    label: 'Đã tiết kiệm',
+                    value: Formatters.currency(goal.savedAmount)),
+                _InfoRow(
+                    label: 'Mục tiêu',
+                    value: Formatters.currency(goal.targetAmount)),
+                _InfoRow(
+                    label: 'Còn thiếu',
+                    value: Formatters.currency(
+                        (goal.targetAmount - goal.savedAmount)
+                            .clamp(0, goal.targetAmount))),
                 if (goal.expectedCompletionDate != null)
-                  _InfoRow(label: 'Ngày dự kiến', value: Formatters.date(goal.expectedCompletionDate!)),
+                  _InfoRow(
+                      label: 'Ngày dự kiến',
+                      value: Formatters.date(goal.expectedCompletionDate!)),
                 _InfoRow(label: 'Trạng thái', value: _statusLabel(goal.status)),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
-                  onPressed: () => context.push(AppRoutes.transferAdd),
+                  onPressed: () {
+                    if (context.read<WalletProvider>().wallets.length < 2) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Cần ít nhất 2 ví để nạp tiền vào mục tiêu'),
+                        ),
+                      );
+                      return;
+                    }
+                    context.push(AppRoutes.transferAddForGoalPath(goal.id));
+                  },
                   icon: const Icon(Icons.add),
                   label: const Text('Nạp thêm tiền vào mục tiêu này'),
                 ),

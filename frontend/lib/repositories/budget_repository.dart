@@ -1,13 +1,14 @@
 import 'package:sqflite/sqflite.dart';
 import '../core/database/db_helper.dart';
+import '../core/database/txn_ext.dart';
+import '../core/utils/clock.dart';
 import '../core/utils/id_generator.dart';
 import '../models/monthly_budget.dart';
 import '../models/sync_queue_item.dart';
 import 'sync_repository.dart';
 
 class BudgetRepository {
-  final Database _db;
-  late final SyncRepository _sync = SyncRepository(_db);
+  final DatabaseExecutor _db;
   BudgetRepository(this._db);
 
   Future<List<MonthlyBudget>> getForMonth(String userId, String yyyyMM) async {
@@ -24,39 +25,89 @@ class BudgetRepository {
     required String month,
     required int spendingLimit,
   }) async {
-    // A category can have only one active budget per month. Update it when
-    // the user submits that category again instead of creating a duplicate.
-    if (id == null) {
-      final existing = await _db.query(
-        Tables.monthlyBudgets,
-        columns: ['id'],
-        where: 'user_id = ? AND category_id = ? AND month = ? AND is_deleted = 0',
-        whereArgs: [userId, categoryId, month],
-        limit: 1,
+    if (spendingLimit <= 0) throw Exception('Hạn mức phải lớn hơn 0');
+    if (!RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(month)) {
+      throw Exception('Tháng không hợp lệ');
+    }
+    return _db.inTxn((e) async {
+      final categories = await e.query(Tables.categories,
+          columns: ['type'],
+          where:
+              'id = ? AND is_deleted = 0 AND (user_id IS NULL OR user_id = ?)',
+          whereArgs: [categoryId, userId],
+          limit: 1);
+      if (categories.isEmpty) throw Exception('Danh mục không hợp lệ');
+      if (categories.first['type'] != 'EXPENSE') {
+        throw Exception('Chỉ đặt ngân sách cho danh mục chi tiêu');
+      }
+      final holders = await e.query(Tables.monthlyBudgets,
+          columns: ['id'],
+          where:
+              'user_id = ? AND category_id = ? AND month = ? AND is_deleted = 0',
+          whereArgs: [userId, categoryId, month],
+          limit: 1);
+      final holderId = holders.isEmpty ? null : holders.first['id'] as String;
+      if (id != null && holderId != null && holderId != id) {
+        throw Exception('Danh mục này đã có ngân sách trong tháng đó');
+      }
+      final existingId = id ?? holderId;
+      final budgetId = existingId ?? IdGenerator.next();
+      final now = nowUtcIso();
+      if (existingId == null) {
+        await e.insert(Tables.monthlyBudgets, {
+          'id': budgetId,
+          'user_id': userId,
+          'category_id': categoryId,
+          'month': month,
+          'spending_limit': spendingLimit,
+          'updated_at': now,
+          'is_deleted': 0,
+        });
+        await SyncRepository(e).enqueue(
+            tableName: Tables.monthlyBudgets,
+            recordId: budgetId,
+            action: SyncAction.create);
+      } else {
+        final count = await e.update(
+          Tables.monthlyBudgets,
+          {
+            'category_id': categoryId,
+            'month': month,
+            'spending_limit': spendingLimit,
+            'updated_at': now,
+          },
+          where: 'id = ? AND user_id = ? AND is_deleted = 0',
+          whereArgs: [existingId, userId],
+        );
+        if (count == 0) throw Exception('Ngân sách không tồn tại');
+        await SyncRepository(e).enqueue(
+            tableName: Tables.monthlyBudgets,
+            recordId: budgetId,
+            action: SyncAction.update);
+      }
+      return MonthlyBudget(
+        id: budgetId,
+        userId: userId,
+        categoryId: categoryId,
+        month: month,
+        spendingLimit: spendingLimit,
+        updatedAt: DateTime.parse(now),
       );
-      if (existing.isNotEmpty) id = existing.first['id'] as String;
-    }
-    final budget = MonthlyBudget(
-      id: id ?? IdGenerator.next(),
-      userId: userId,
-      categoryId: categoryId,
-      month: month,
-      spendingLimit: spendingLimit,
-      updatedAt: DateTime.now(),
-    );
-    if (id == null) {
-      await _db.insert(Tables.monthlyBudgets, budget.toMap());
-      await _sync.enqueue(tableName: Tables.monthlyBudgets, recordId: budget.id, action: SyncAction.create);
-    } else {
-      await _db.update(Tables.monthlyBudgets, budget.toMap(), where: 'id = ?', whereArgs: [id]);
-      await _sync.enqueue(tableName: Tables.monthlyBudgets, recordId: budget.id, action: SyncAction.update);
-    }
-    return budget;
+    });
   }
 
-  Future<void> delete(String id) async {
-    await _db.update(Tables.monthlyBudgets, {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
-        where: 'id = ?', whereArgs: [id]);
-    await _sync.enqueue(tableName: Tables.monthlyBudgets, recordId: id, action: SyncAction.delete);
-  }
+  Future<void> delete(String id) => _db.inTxn((e) async {
+        final count = await e.update(
+          Tables.monthlyBudgets,
+          {'is_deleted': 1, 'updated_at': nowUtcIso()},
+          where: 'id = ? AND is_deleted = 0',
+          whereArgs: [id],
+        );
+        if (count > 0) {
+          await SyncRepository(e).enqueue(
+              tableName: Tables.monthlyBudgets,
+              recordId: id,
+              action: SyncAction.delete);
+        }
+      });
 }

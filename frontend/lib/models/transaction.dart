@@ -1,3 +1,5 @@
+import '../core/utils/clock.dart';
+
 import 'category.dart';
 
 class FinanceTransaction {
@@ -49,9 +51,9 @@ class FinanceTransaction {
         'type': type.value,
         'amount': amount,
         'note': note,
-        'transaction_date': transactionDate.toIso8601String().split('T').first,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt?.toIso8601String(),
+        'transaction_date': dateOnly(transactionDate),
+        'created_at': toUtcIso(createdAt),
+        'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
       };
 
@@ -77,9 +79,9 @@ class FinanceTransaction {
         'type': type.value,
         'amount': amount,
         'note': note,
-        'transactionDate': transactionDate.toIso8601String().split('T').first,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt?.toIso8601String(),
+        'transactionDate': dateOnly(transactionDate),
+        'createdAt': toUtcIso(createdAt),
+        'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
       };
 
@@ -102,7 +104,7 @@ class FinanceTransaction {
         note: note ?? this.note,
         transactionDate: transactionDate ?? this.transactionDate,
         createdAt: createdAt,
-        updatedAt: DateTime.now(),
+        updatedAt: nowUtc(),
         isDeleted: isDeleted ?? this.isDeleted,
       );
 }

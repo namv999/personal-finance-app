@@ -16,6 +16,7 @@ class AppRoutes {
 
   static const String wallets = '/wallets';
   static const String walletAdd = '/wallets/add';
+  static const String walletCreateRequired = '/wallets/create-required';
   static const String walletEdit = '/wallets/edit/:id';
   static const String walletDetail = '/wallets/:id';
 
@@ -49,4 +50,6 @@ class AppRoutes {
   static String categoryEditPath(String id) => '/categories/edit/$id';
   static String transactionEditPath(String id) => '/transactions/edit/$id';
   static String savingGoalDetailPath(String id) => '/saving-goals/$id';
+  static String transferAddForGoalPath(String goalId) =>
+      '$transferAdd?goalId=$goalId';
 }
