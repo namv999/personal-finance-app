@@ -63,7 +63,7 @@ class DbHelper {
     final path = join(dbPath, 'personal_finance.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
@@ -125,6 +125,23 @@ class DbHelper {
       await db.execute("ALTER TABLE ${Tables.transactions} ADD COLUMN source TEXT NOT NULL DEFAULT 'MANUAL' CHECK (source IN ('MANUAL','SMS','IMAGE','TEXT'))");
       await db.execute(_ddlPendingTransactions);
       await db.execute('UPDATE OR IGNORE ${Tables.users} SET email = lower(trim(email)) WHERE email IS NOT NULL');
+    }
+    if (oldVersion < 5) {
+      await db.execute('DROP TABLE IF EXISTS ${Tables.aiSuggestions}');
+      await db.execute('''
+        CREATE TABLE ${Tables.aiSuggestions} (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          period_type TEXT NOT NULL CHECK (period_type IN ('WEEK', 'MONTH')),
+          period_start TEXT NOT NULL,
+          period_end TEXT NOT NULL,
+          suggestion_content TEXT NOT NULL,
+          suggested_data TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES ${Tables.users}(id),
+          UNIQUE (user_id, period_type, period_start)
+        )
+      ''');
     }
     await _createIndexes(db);
   }
@@ -291,10 +308,14 @@ class DbHelper {
       CREATE TABLE ${Tables.aiSuggestions} (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
-        month TEXT NOT NULL,
+        period_type TEXT NOT NULL CHECK (period_type IN ('WEEK', 'MONTH')),
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
         suggestion_content TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES ${Tables.users}(id)
+        suggested_data TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES ${Tables.users}(id),
+        UNIQUE (user_id, period_type, period_start)
       )
     ''');
 

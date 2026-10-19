@@ -29,6 +29,7 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
   String? _destinationId;
   String? _goalId;
   bool _goalTouched = false;
+  bool _defaultsInit = false;
   bool _saving = false;
   DateTime _date = DateTime.parse(businessToday());
 
@@ -36,31 +37,30 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
   void initState() {
     super.initState();
     _goalId = widget.goalId;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final wallets = context.read<WalletProvider>().wallets;
-      if (wallets.length >= 2) {
-        final goals = context.read<SavingGoalProvider>().goals;
-        final requestedGoal =
-            goals.where((g) => g.id == widget.goalId).firstOrNull;
-        final goalWalletId = requestedGoal?.walletId;
-        final linkedDestination = goalWalletId == null
-            ? null
-            : wallets.where((w) => w.id == goalWalletId).firstOrNull;
-        final source = linkedDestination == null
-            ? wallets[0]
-            : wallets.firstWhere((w) => w.id != linkedDestination.id);
-        final destination = linkedDestination ?? wallets[1];
-        setState(() {
-          _goalId = requestedGoal?.id;
-          _goalTouched = requestedGoal != null;
-          _sourceId = source.id;
-          _destinationId = destination.id;
-          _autoPickGoal(
-            sourceId: _sourceId,
-            destId: _destinationId,
-          );
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initDefaults());
+  }
+
+  void _initDefaults() {
+    if (!mounted || _defaultsInit) return;
+    final wallets = context.read<WalletProvider>().wallets;
+    if (wallets.length < 2) return;
+    _defaultsInit = true;
+    final goals = context.read<SavingGoalProvider>().goals;
+    final requestedGoal = goals.where((g) => g.id == widget.goalId).firstOrNull;
+    final goalWalletId = requestedGoal?.walletId;
+    final linkedDestination = goalWalletId == null
+        ? null
+        : wallets.where((w) => w.id == goalWalletId).firstOrNull;
+    final source = linkedDestination == null
+        ? wallets[0]
+        : wallets.firstWhere((w) => w.id != linkedDestination.id);
+    final destination = linkedDestination ?? wallets[1];
+    setState(() {
+      _goalId = requestedGoal?.id;
+      _goalTouched = requestedGoal != null;
+      _sourceId = source.id;
+      _destinationId = destination.id;
+      _autoPickGoal(sourceId: _sourceId, destId: _destinationId);
     });
   }
 
@@ -165,8 +165,10 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Hiện bạn mới có 1 ví. Hãy tạo thêm một chiếc ví khác để thực hiện chuyển tiền giữa các ví.',
+                Text(
+                  wallets.isEmpty
+                      ? 'Bạn chưa có ví nào. Hãy tạo ví để chuyển tiền giữa các ví.'
+                      : 'Hiện bạn mới có 1 ví. Hãy tạo thêm một chiếc ví khác để thực hiện chuyển tiền giữa các ví.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
@@ -181,6 +183,10 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
           ),
         ),
       );
+    }
+
+    if (!_defaultsInit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _initDefaults());
     }
 
     final compatibleGoals = allGoals

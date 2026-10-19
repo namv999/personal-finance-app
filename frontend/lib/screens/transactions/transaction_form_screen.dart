@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/clock.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_routes.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/ledger_refresh.dart';
 import '../../core/utils/validators.dart';
@@ -95,6 +97,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         await provider.editTransaction(_editing!.copyWith(
           walletId: _walletId,
           categoryId: _categoryId,
+          clearCategory: _categoryId == null,
           type: _type,
           amount: amount,
           note: _noteController.text.trim(),
@@ -138,6 +141,39 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   @override
   Widget build(BuildContext context) {
     final wallets = context.watch<WalletProvider>().wallets;
+    if (!isEditing && wallets.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Giao dịch mới')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.account_balance_wallet_outlined,
+                    size: 64, color: AppColors.textSecondary),
+                const SizedBox(height: 16),
+                const Text('Bạn cần có ít nhất 1 ví',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                const Text('Hãy tạo ví trước khi ghi thu chi.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () => context.push(AppRoutes.walletAdd),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tạo ví mới'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (_walletId == null && !isEditing && wallets.isNotEmpty) {
+      _walletId = wallets.first.id;
+    }
     final categories = context.watch<CategoryProvider>();
     final categoryOptions = _type == CategoryType.income
         ? categories.incomeCategories

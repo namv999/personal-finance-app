@@ -1,41 +1,36 @@
-import '../core/utils/clock.dart';
 import 'package:sqflite/sqflite.dart';
+
 import '../core/database/db_helper.dart';
+import '../core/utils/clock.dart';
 import '../core/utils/id_generator.dart';
 import '../models/ai_suggestion.dart';
 
-/// AI-generated monthly financial suggestions. Generation happens
-/// server-side (Spring Boot + an LLM call) — this repo caches results
-/// locally and exposes a stub for fetching new ones.
+/// Local cache of backend generated suggestions, at most one per period.
 class AiSuggestionRepository {
   final DatabaseExecutor _db;
   AiSuggestionRepository(this._db);
 
-  Future<List<AiSuggestion>> getForMonth(String userId, String yyyyMM) async {
+  Future<List<AiSuggestion>> getForPeriod(String userId, AiPeriod period) async {
     final rows = await _db.query(Tables.aiSuggestions,
-        where: 'user_id = ? AND month = ?',
-        whereArgs: [userId, yyyyMM],
+        where: 'user_id = ? AND period_type = ? AND period_start = ?',
+        whereArgs: [userId, period.type.value, dateOnly(period.start)],
         orderBy: 'created_at DESC');
     return rows.map(AiSuggestion.fromMap).toList();
   }
 
-  /// TODO(backend): call `POST {ApiEndpoints.aiSuggestions}` with the
-  /// month's transaction summary and store the returned suggestion here.
-  Future<AiSuggestion> requestSuggestion(String userId, String yyyyMM) async {
-    // final response = await ApiClient.instance.post(ApiEndpoints.aiSuggestions,
-    //     body: {'userId': userId, 'month': yyyyMM});
-    // final suggestion = AiSuggestion.fromJson(response);
-
-    // Local placeholder until the backend endpoint exists.
+  /// TODO(backend): request the API, which computes all financial figures.
+  Future<AiSuggestion> requestSuggestion(String userId, AiPeriod period) async {
     final suggestion = AiSuggestion(
       id: IdGenerator.next(),
       userId: userId,
-      month: yyyyMM,
-      suggestionContent:
-          'Kết nối backend để nhận gợi ý tài chính được tạo bởi AI dựa trên chi tiêu tháng này.',
+      periodType: period.type,
+      periodStart: period.start,
+      periodEnd: period.end,
+      suggestionContent: 'Kết nối backend để nhận gợi ý tài chính được tạo bởi AI.',
       createdAt: nowUtc(),
     );
-    await _db.insert(Tables.aiSuggestions, suggestion.toMap());
+    await _db.insert(Tables.aiSuggestions, suggestion.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
     return suggestion;
   }
 }

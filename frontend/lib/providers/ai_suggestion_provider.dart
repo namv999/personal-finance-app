@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../core/utils/formatters.dart';
+
 import '../models/ai_suggestion.dart';
 import '../repositories/ai_suggestion_repository.dart';
 
@@ -11,16 +11,22 @@ class AiSuggestionProvider extends ChangeNotifier {
   List<AiSuggestion> suggestions = [];
   bool isLoading = false;
 
-  Future<void> load({DateTime? month}) async {
+  Future<void> load({AiPeriodType type = AiPeriodType.month, DateTime? date}) async {
     isLoading = true;
     notifyListeners();
-    suggestions = await _repo.getForMonth(userId, Formatters.yyyyMM(month ?? DateTime.now()));
-    isLoading = false;
-    notifyListeners();
+    try {
+      suggestions = await _repo.getForPeriod(userId, AiPeriod.of(type, date));
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<void> requestNew({DateTime? month}) async {
-    await _repo.requestSuggestion(userId, Formatters.yyyyMM(month ?? DateTime.now()));
-    await load(month: month);
+  Future<void> requestNew({
+    AiPeriodType type = AiPeriodType.month,
+    DateTime? date,
+  }) async {
+    await _repo.requestSuggestion(userId, AiPeriod.of(type, date));
+    await load(type: type, date: date);
   }
 }

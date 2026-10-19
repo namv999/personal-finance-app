@@ -2,6 +2,18 @@ import '../core/utils/clock.dart';
 
 import 'category.dart';
 
+enum TransactionSource { manual, sms, image, text }
+
+extension TransactionSourceX on TransactionSource {
+  String get value => name.toUpperCase();
+
+  static TransactionSource fromValue(String? value) =>
+      TransactionSource.values.firstWhere(
+        (source) => source.value == value,
+        orElse: () => TransactionSource.manual,
+      );
+}
+
 class FinanceTransaction {
   final String id;
   final String userId;
@@ -14,6 +26,7 @@ class FinanceTransaction {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final bool isDeleted;
+  final TransactionSource source;
 
   FinanceTransaction({
     required this.id,
@@ -27,6 +40,7 @@ class FinanceTransaction {
     required this.createdAt,
     this.updatedAt,
     this.isDeleted = false,
+    this.source = TransactionSource.manual,
   });
 
   factory FinanceTransaction.fromMap(Map<String, dynamic> map) => FinanceTransaction(
@@ -41,6 +55,7 @@ class FinanceTransaction {
         createdAt: DateTime.parse(map['created_at']),
         updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
         isDeleted: (map['is_deleted'] as int? ?? 0) == 1,
+        source: TransactionSourceX.fromValue(map['source']),
       );
 
   Map<String, dynamic> toMap() => {
@@ -55,6 +70,7 @@ class FinanceTransaction {
         'created_at': toUtcIso(createdAt),
         'updated_at': toUtcIsoN(updatedAt),
         'is_deleted': isDeleted ? 1 : 0,
+        'source': source.value,
       };
 
   factory FinanceTransaction.fromJson(Map<String, dynamic> json) => FinanceTransaction(
@@ -69,6 +85,7 @@ class FinanceTransaction {
         createdAt: DateTime.parse(json['createdAt']),
         updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
         isDeleted: json['isDeleted'] ?? false,
+        source: TransactionSourceX.fromValue(json['source']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -83,6 +100,7 @@ class FinanceTransaction {
         'createdAt': toUtcIso(createdAt),
         'updatedAt': toUtcIsoN(updatedAt),
         'isDeleted': isDeleted,
+        'source': source.value,
       };
 
   FinanceTransaction copyWith({
@@ -93,12 +111,13 @@ class FinanceTransaction {
     String? note,
     DateTime? transactionDate,
     bool? isDeleted,
+    bool clearCategory = false,
   }) =>
       FinanceTransaction(
         id: id,
         userId: userId,
         walletId: walletId ?? this.walletId,
-        categoryId: categoryId ?? this.categoryId,
+        categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
         type: type ?? this.type,
         amount: amount ?? this.amount,
         note: note ?? this.note,
@@ -106,5 +125,6 @@ class FinanceTransaction {
         createdAt: createdAt,
         updatedAt: nowUtc(),
         isDeleted: isDeleted ?? this.isDeleted,
+        source: source,
       );
 }
