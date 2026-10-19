@@ -2,9 +2,9 @@
 
 ## Phạm vi
 - Đồng bộ: wallets, categories (user_id NOT NULL), saving_goals, transactions, transfers, monthly_budgets.
-- Không đồng bộ: users (qua /auth/*), pets, saving_streaks, sync_queue, pending_transactions.
+- Không đồng bộ: users (qua /auth/*), pets, saving_streaks, ai_suggestions (cache local kết quả backend trả về), pending_transactions, sync_queue.
 - Danh mục hệ thống (user_id NULL): hai phía tự seed cùng UUID, read-only, không push/pull.
-- Không gửi cache: wallets.current_balance, saving_goals.saved_amount. Client tính lại sau pull.
+- Không gửi cache: wallets.current_balance, saving_goals.saved_amount. Client tính lại sau pull. Số dư ví = opening_balance + thu - chi + chuyển vào - chuyển ra.
 
 ## Định dạng
 - Tên field JSON = tên cột (snake_case). is_deleted là boolean. Tiền là long (VND).
