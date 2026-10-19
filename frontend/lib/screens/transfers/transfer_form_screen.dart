@@ -170,7 +170,7 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
                       ? 'Bạn chưa có ví nào. Hãy tạo ví để chuyển tiền giữa các ví.'
                       : 'Hiện bạn mới có 1 ví. Hãy tạo thêm một chiếc ví khác để thực hiện chuyển tiền giữa các ví.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(

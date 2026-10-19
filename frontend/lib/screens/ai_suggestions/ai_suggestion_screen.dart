@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/formatters.dart';
+import '../../models/ai_suggestion.dart';
 import '../../providers/ai_suggestion_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
@@ -39,7 +40,12 @@ class AiSuggestionScreen extends StatelessWidget {
                               Row(children: [
                                 const Icon(Icons.auto_awesome, color: AppColors.secondary, size: 18),
                                 const SizedBox(width: 6),
-                                Text('Tháng ${s.month}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                Text(
+                                  s.periodType == AiPeriodType.month
+                                      ? 'Tháng ${Formatters.yyyyMM(s.periodStart)}'
+                                      : 'Tuần ${Formatters.date(s.periodStart)} – ${Formatters.date(s.periodEnd)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
                               ]),
                               const SizedBox(height: 10),
                               Text(s.suggestionContent),

@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import '../lib/core/database/db_helper.dart';
-import '../lib/models/sync_queue_item.dart';
-import '../lib/repositories/sync_repository.dart';
+import 'package:personal_finance_app/core/database/db_helper.dart';
+import 'package:personal_finance_app/models/sync_queue_item.dart';
+import 'package:personal_finance_app/repositories/sync_repository.dart';
 
 void main() {
   late Database db;
