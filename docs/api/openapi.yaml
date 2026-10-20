@@ -1,0 +1,361 @@
+openapi: 3.0.3
+info:
+  title: Personal Finance API
+  version: 1.0.1
+  description: |
+    Hợp đồng API duy nhất giữa Flutter và Spring Boot (Phase 2: auth và sync).
+    JSON snake_case theo tên cột; updated_at là UTC ISO-8601 mili-giây hậu tố Z;
+    ngày nghiệp vụ yyyy-MM-dd; tiền là số nguyên VND; UUID viết thường.
+servers:
+  - url: http://10.0.2.2:8080
+tags:
+  - name: Auth
+  - name: Sync
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Đăng ký, cần mạng. id do client sinh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Tạo mới thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: Trùng email (EMAIL_ALREADY_EXISTS) hoặc ID (ID_ALREADY_EXISTS)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Đăng nhập
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Sai thông tin, thông báo chung (code INVALID_CREDENTIALS)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /sync/push:
+    post:
+      tags: [Sync]
+      summary: Đẩy snapshot hiện tại của các bản ghi bẩn
+      description: |
+        Thứ tự xử lý cố định: wallets, categories, saving_goals, transactions và transfers,
+        monthly_budgets. Mỗi bản ghi xử lý độc lập, push lặp lại là an toàn.
+        LWW theo updated_at; nếu updated_at > now + 5 phút thì ép về now.
+        Mỗi lần ghi server gán server_version. Không validate đủ số dư.
+        user_id trong bản ghi là tùy chọn; có mà khác user trong token thì REJECTED/INVALID.
+        Tối đa 500 bản ghi mỗi request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRequest' }
+      responses:
+        '200':
+          description: Kết quả từng bản ghi
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /sync/pull:
+    get:
+      tags: [Sync]
+      summary: Kéo thay đổi có server_version lớn hơn cursor
+      description: |
+        Client gộp mọi trang, áp dụng trong một transaction, rồi mới lưu cursor.
+        Cursor do server cấp, không phải timestamp; lần đầu là 0.
+        Chỉ trả bản ghi của user trong token, không trả danh mục hệ thống.
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: integer, format: int64, minimum: 0, default: 0 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 500 }
+      responses:
+        '200':
+          description: Một trang thay đổi, sắp theo server_version
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PullResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Thiếu hoặc hết hạn token (code UNAUTHORIZED)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Request sai cấu trúc (code VALIDATION_FAILED)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    RegisterRequest:
+      type: object
+      required: [id, full_name, email, password]
+      properties:
+        id: { type: string, format: uuid, description: UUID do client sinh }
+        full_name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, description: Server lưu lowercase }
+        password: { type: string, minLength: 6, maxLength: 72 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/UserInfo' }
+
+    UserInfo:
+      type: object
+      required: [id, full_name, email]
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string }
+        email: { type: string }
+
+    TxType:
+      type: string
+      enum: [INCOME, EXPENSE]
+
+    SyncBase:
+      type: object
+      required: [id, updated_at, is_deleted]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid, description: Tùy chọn khi push; luôn có khi pull }
+        updated_at: { type: string, format: date-time }
+        is_deleted: { type: boolean }
+
+    ServerVersioned:
+      type: object
+      required: [server_version]
+      properties:
+        server_version: { type: integer, format: int64, readOnly: true }
+
+    WalletRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [wallet_name, wallet_type, opening_balance]
+          properties:
+            wallet_name: { type: string }
+            wallet_type: { type: string }
+            opening_balance: { type: integer, format: int64, description: Không gửi current_balance }
+            color: { type: string, nullable: true }
+            icon: { type: string, nullable: true }
+
+    CategoryRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [category_name, type]
+          properties:
+            category_name: { type: string }
+            type: { $ref: '#/components/schemas/TxType' }
+            color: { type: string, nullable: true }
+            icon: { type: string, nullable: true }
+
+    SavingGoalRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [goal_name, target_amount, status]
+          properties:
+            wallet_id: { type: string, format: uuid, nullable: true }
+            goal_name: { type: string }
+            target_amount: { type: integer, format: int64, minimum: 1 }
+            expected_completion_date: { type: string, format: date, nullable: true }
+            status: { type: string, description: Không gửi saved_amount }
+
+    TransactionRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [wallet_id, type, amount, source, transaction_date]
+          properties:
+            wallet_id: { type: string, format: uuid }
+            category_id: { type: string, format: uuid, nullable: true }
+            type: { $ref: '#/components/schemas/TxType' }
+            amount: { type: integer, format: int64, minimum: 1 }
+            note: { type: string, nullable: true }
+            source: { type: string, enum: [MANUAL, SMS, IMAGE, TEXT] }
+            transaction_date: { type: string, format: date }
+            created_at: { type: string, format: date-time, readOnly: true, description: Server gán }
+
+    TransferRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [source_wallet_id, destination_wallet_id, amount, transfer_date]
+          properties:
+            source_wallet_id: { type: string, format: uuid }
+            destination_wallet_id: { type: string, format: uuid }
+            goal_id: { type: string, format: uuid, nullable: true }
+            amount: { type: integer, format: int64, minimum: 1 }
+            transfer_date: { type: string, format: date }
+            note: { type: string, nullable: true }
+
+    MonthlyBudgetRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [category_id, month, spending_limit]
+          properties:
+            category_id: { type: string, format: uuid }
+            month: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+            spending_limit: { type: integer, format: int64, minimum: 1 }
+
+    PushRequest:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: object
+          properties:
+            wallets:
+              type: array
+              items: { $ref: '#/components/schemas/WalletRecord' }
+            categories:
+              type: array
+              items: { $ref: '#/components/schemas/CategoryRecord' }
+            saving_goals:
+              type: array
+              items: { $ref: '#/components/schemas/SavingGoalRecord' }
+            transactions:
+              type: array
+              items: { $ref: '#/components/schemas/TransactionRecord' }
+            transfers:
+              type: array
+              items: { $ref: '#/components/schemas/TransferRecord' }
+            monthly_budgets:
+              type: array
+              items: { $ref: '#/components/schemas/MonthlyBudgetRecord' }
+
+    PushResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/PushResult' }
+
+    PushResult:
+      type: object
+      required: [table, id, status]
+      properties:
+        table:
+          type: string
+          enum: [wallets, categories, saving_goals, transactions, transfers, monthly_budgets]
+        id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [APPLIED, SKIPPED_NEWER, REJECTED]
+        reason:
+          type: string
+          nullable: true
+          enum: [PARENT_DELETED, FUTURE_DATE, INVALID]
+          description: |
+            PARENT_DELETED: client soft-delete bản ghi mồ côi và tính lại số dư.
+            INVALID: sai cấu trúc, sai chủ sở hữu, cha không tồn tại, amount <= 0,
+            goal.wallet_id không khớp destination_wallet_id.
+        message: { type: string, nullable: true, description: Mô tả để debug, client không phụ thuộc }
+
+    PullResponse:
+      type: object
+      required: [changes, next_cursor, has_more]
+      properties:
+        changes:
+          type: object
+          properties:
+            wallets:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/WalletRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+            categories:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/CategoryRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+            saving_goals:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/SavingGoalRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+            transactions:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/TransactionRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+            transfers:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/TransferRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+            monthly_budgets:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/MonthlyBudgetRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+        next_cursor: { type: integer, format: int64 }
+        has_more: { type: boolean }

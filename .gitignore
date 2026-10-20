@@ -9,8 +9,11 @@ frontend/**/generated_plugin_registrant.dart
 # Spring Boot / Java
 backend/target/
 backend/*.class
-backend/.mvn/
 backend/HELP.md
+backend/.env
+backend/src/main/resources/application-local.yml
+.env
+application-local.yml
 
 # IDE
 .vscode/

@@ -10,6 +10,7 @@
 - Tên field JSON = tên cột (snake_case). is_deleted là boolean. Tiền là long (VND).
 - transaction_date/transfer_date: yyyy-MM-dd. updated_at: ISO-8601 UTC, mili-giây, hậu tố Z.
 - created_at do server tự gán.
+- `user_id` khi push là tùy chọn: nếu gửi thì phải khớp user trong token, nếu không server tự gán từ JWT; pull luôn trả `user_id`.
 
 ## Auth
 - POST /auth/register {id, full_name, email, password} -> 201 {token, user}; trùng email -> 409.
@@ -21,6 +22,7 @@
 - Req: {records: {wallets: [...], categories: [...], ...}} - mỗi bản ghi là snapshot hiện tại (gồm is_deleted).
 - Res: {results: [{table, id, status, reason?}]}, status: APPLIED | SKIPPED_NEWER | REJECTED.
 - Mỗi item xử lý độc lập; xử lý bảng cha trước con.
+- Tối đa 500 bản ghi tổng cộng mỗi request.
 - LWW theo updated_at của client; updated_at > now + 5 phút thì ép về now.
 - Mỗi lần ghi, server gán server_version (SEQUENCE).
 - Chỉ validate cấu trúc: user_id khớp token, bản ghi cha tồn tại cùng user, amount > 0,
@@ -32,7 +34,7 @@
   bản còn lại is_deleted = true.
 
 ## GET /sync/pull?cursor=<int64>&limit=500
-- Res: {changes: {table: [...]}, nextCursor, hasMore}. Lọc server_version > cursor, theo user từ token.
+- Res: {changes: {wallets: [...], categories: [...], saving_goals: [...], transactions: [...], transfers: [...], monthly_budgets: [...]}, next_cursor, has_more}. Lọc server_version > cursor, theo user từ token.
 - Cursor là số do server cấp, không phải timestamp. Lần đầu cursor = 0.
 - Client gộp mọi trang, áp dụng trong 1 transaction, lưu cursor sau khi thành công.
 - Tham số cursor thay cho since.

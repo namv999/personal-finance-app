@@ -9,9 +9,11 @@
 ## Tech Stack
 
 **Frontend:** Flutter (Dart), Provider, SQLite (sqflite), dio, fl_chart
-**Backend:** Spring Boot (Java), Spring Security + JWT, Spring Data JPA, MySQL/PostgreSQL
+**Backend:** Spring Boot 4.1.1 (Java 17), Spring Security + JWT, Spring Data JPA, SQL Server, Flyway
 **Đồng bộ:** REST API `/sync/push`, `/sync/pull`, UUID primary key, Last-Write-Wins
-**AI:** OpenAI API / Google Gemini API (gọi từ Backend)
+**AI:** OpenAI API / Google Gemini API (gọi từ Backend; JSON dùng snake_case)
+
+Hợp đồng API Phase 2: [docs/api/openapi.yaml](docs/api/openapi.yaml). Quy tắc `user_id` khi push: tùy chọn; nếu gửi phải khớp user trong JWT, còn thiếu thì server tự gán. Pull luôn trả `user_id`. Server không lưu các cache client `current_balance` và `saved_amount`.
 
 ## Cấu trúc thư mục
 personal-finance-app/
@@ -43,7 +45,7 @@ flutter run
 cd backend
 ./mvnw spring-boot:run
 ```
-Cấu hình kết nối database tại `backend/src/main/resources/application.properties`.
+Cấu hình các biến môi trường `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` trong Run Configuration. Flyway quản lý schema SQL Server trong `backend/src/main/resources/db/migration/`.
 
 ## Tài liệu
 
