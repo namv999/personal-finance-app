@@ -27,6 +27,7 @@ import 'repositories/transaction_repository.dart';
 import 'repositories/transfer_repository.dart';
 import 'repositories/wallet_repository.dart';
 import 'routes/app_router.dart';
+import 'repositories/sync_pull_repository.dart';
 
 /// A placeholder id used only before a user logs in. Every real screen is
 /// route-guarded behind authentication, so per-user providers below never
@@ -43,9 +44,12 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   late final AuthRepository _authRepository = AuthRepository(widget.database);
-  late final AuthProvider _authProvider = AuthProvider(_authRepository)..bootstrap();
-  late final WalletRepository _walletRepository = WalletRepository(widget.database);
-  late final WalletProvider _walletProvider = WalletProvider(_walletRepository, _noUser);
+  late final AuthProvider _authProvider = AuthProvider(_authRepository)
+    ..bootstrap();
+  late final WalletRepository _walletRepository =
+      WalletRepository(widget.database);
+  late final WalletProvider _walletProvider =
+      WalletProvider(_walletRepository, _noUser);
   late final router = buildRouter(_authProvider, _walletProvider);
 
   @override
@@ -71,6 +75,15 @@ class _AppState extends State<App> {
                 as Map<String, dynamic>,
           ),
         ),
+        Provider(
+          create: (_) => SyncPullRepository(
+            SyncRepository(database),
+            database,
+            (query) async => (await ApiClient.instance
+                    .get(ApiEndpoints.syncPull, query: query))
+                as Map<String, dynamic>,
+          ),
+        ),
         Provider(create: (_) => AiSuggestionRepository(database)),
 
         // Auth is the root provider everything else depends on.
@@ -83,7 +96,8 @@ class _AppState extends State<App> {
               _walletProvider..updateUser(auth.currentUser?.id ?? _noUser),
         ),
         ChangeNotifierProxyProvider<AuthProvider, CategoryProvider>(
-          create: (ctx) => CategoryProvider(ctx.read<CategoryRepository>(), _noUser),
+          create: (ctx) =>
+              CategoryProvider(ctx.read<CategoryRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
@@ -91,16 +105,18 @@ class _AppState extends State<App> {
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, TransactionProvider>(
-          create: (ctx) => TransactionProvider(
-              ctx.read<TransactionRepository>(), _noUser),
+          create: (ctx) =>
+              TransactionProvider(ctx.read<TransactionRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return TransactionProvider(ctx.read<TransactionRepository>(), id)..load();
+            return TransactionProvider(ctx.read<TransactionRepository>(), id)
+              ..load();
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, TransferProvider>(
-          create: (ctx) => TransferProvider(ctx.read<TransferRepository>(), _noUser),
+          create: (ctx) =>
+              TransferProvider(ctx.read<TransferRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
@@ -108,37 +124,45 @@ class _AppState extends State<App> {
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, SavingGoalProvider>(
-          create: (ctx) => SavingGoalProvider(ctx.read<SavingGoalRepository>(), _noUser),
+          create: (ctx) =>
+              SavingGoalProvider(ctx.read<SavingGoalRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return SavingGoalProvider(ctx.read<SavingGoalRepository>(), id)..load();
+            return SavingGoalProvider(ctx.read<SavingGoalRepository>(), id)
+              ..load();
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, BudgetProvider>(
-          create: (ctx) => BudgetProvider(
-              ctx.read<BudgetRepository>(), ctx.read<TransactionRepository>(), _noUser),
+          create: (ctx) => BudgetProvider(ctx.read<BudgetRepository>(),
+              ctx.read<TransactionRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return BudgetProvider(ctx.read<BudgetRepository>(), ctx.read<TransactionRepository>(), id)..load();
+            return BudgetProvider(ctx.read<BudgetRepository>(),
+                ctx.read<TransactionRepository>(), id)
+              ..load();
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, PetStreakProvider>(
-          create: (ctx) =>
-              PetStreakProvider(ctx.read<PetRepository>(), ctx.read<SavingStreakRepository>(), _noUser),
+          create: (ctx) => PetStreakProvider(ctx.read<PetRepository>(),
+              ctx.read<SavingStreakRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return PetStreakProvider(ctx.read<PetRepository>(), ctx.read<SavingStreakRepository>(), id)..load();
+            return PetStreakProvider(ctx.read<PetRepository>(),
+                ctx.read<SavingStreakRepository>(), id)
+              ..load();
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, AiSuggestionProvider>(
-          create: (ctx) => AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), _noUser),
+          create: (ctx) =>
+              AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), id)..load();
+            return AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), id)
+              ..load();
           },
         ),
       ],

@@ -118,6 +118,10 @@ class SyncRepository {
         final remote = <String, Object?>{for (final c in syncColumns[table]!) if (raw.containsKey(c)) c: raw[c]};
         if (remote['user_id'] != userId) continue;
         remote['is_deleted'] = (remote['is_deleted'] == true || remote['is_deleted'] == 1) ? 1 : 0;
+        // Giữ created_at do server gán (không thêm vào syncColumns để push không gửi)
+        if (table == Tables.transactions && raw['created_at'] is String) {
+          remote['created_at'] = raw['created_at'];
+        }
         final remoteAt = _ts(remote['updated_at']);
         final local = await e.query(table, columns: ['updated_at'], where: 'id = ?', whereArgs: [remote['id']], limit: 1);
         if (local.isNotEmpty && !_ts(local.first['updated_at']).isBefore(remoteAt)) continue;

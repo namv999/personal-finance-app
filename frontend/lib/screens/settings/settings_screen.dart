@@ -10,6 +10,9 @@ import '../../providers/auth_provider.dart';
 import '../../repositories/transaction_repository.dart';
 import '../../repositories/sync_push_repository.dart';
 import '../../repositories/wallet_repository.dart';
+import '../../providers/category_provider.dart';
+import '../../repositories/sync_pull_repository.dart';
+import '../../core/utils/ledger_refresh.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -96,7 +99,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () async {
               final userId = context.read<AuthProvider>().currentUser?.id;
               if (userId == null) return;
-              final result = await context.read<SyncPushRepository>().push(userId);
+              final result =
+                  await context.read<SyncPushRepository>().push(userId);
               final message = result.skippedNoToken
                   ? 'Bỏ qua: chưa có token đăng nhập online'
                   : 'applied=${result.applied}, skipped=${result.skippedNewer}, '
@@ -108,6 +112,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ..hideCurrentSnackBar()
                   ..showSnackBar(SnackBar(content: Text(message)));
               }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('Pull dữ liệu từ server (debug)'),
+            onTap: () async {
+              final userId = context.read<AuthProvider>().currentUser?.id;
+              if (userId == null) return;
+              final result =
+                  await context.read<SyncPullRepository>().pull(userId);
+              if (!context.mounted) return;
+              if (result.ok && !result.skippedNoToken) {
+                await context.read<CategoryProvider>().load();
+                if (!context.mounted) return;
+                await LedgerRefresh.all(context).run();
+              }
+              if (!context.mounted) return;
+              final message = result.skippedNoToken
+                  ? 'Bỏ qua: chưa có token đăng nhập online'
+                  : 'pages=${result.pages}, received=${result.received}, '
+                      'cursor=${result.cursor}, err=${result.error}, '
+                      '401=${result.unauthorized}';
+              debugPrint(message);
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(content: Text(message)));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.restart_alt),
+            title: const Text('Reset cursor về 0 (debug)'),
+            onTap: () async {
+              final userId = context.read<AuthProvider>().currentUser?.id;
+              if (userId == null) return;
+              await context.read<SyncPullRepository>().resetCursor(userId);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                    const SnackBar(content: Text('Đã reset cursor')));
             },
           ),
           const Divider(height: 1),
