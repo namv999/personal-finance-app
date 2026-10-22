@@ -75,6 +75,30 @@ class SyncRepository {
     return SyncBatch(records, queueIds);
   }
 
+  /// Split pending records into requests of at most [max] records, preserving
+  /// table order so parent records are sent before their children.
+  List<Map<String, List<Map<String, Object?>>>> splitBatch(SyncBatch batch,
+      {int max = 500}) {
+    if (max <= 0) throw ArgumentError.value(max, 'max', 'Must be positive');
+    final chunks = <Map<String, List<Map<String, Object?>>>>[];
+    var current = <String, List<Map<String, Object?>>>{};
+    var count = 0;
+    for (final table in syncTableOrder) {
+      for (final record
+          in batch.records[table] ?? const <Map<String, Object?>>[]) {
+        if (count == max) {
+          chunks.add(current);
+          current = <String, List<Map<String, Object?>>>{};
+          count = 0;
+        }
+        current.putIfAbsent(table, () => <Map<String, Object?>>[]).add(record);
+        count++;
+      }
+    }
+    if (count > 0) chunks.add(current);
+    return chunks;
+  }
+
   Future<void> markSynced(SyncBatch batch, Iterable<String> recordKeys) async {
     final ids = [for (final k in recordKeys) ...?batch.queueIdsByRecord[k]];
     for (var i = 0; i < ids.length; i += 400) {

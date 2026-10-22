@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'core/network/api_client.dart';
+import 'core/network/api_endpoints.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/ai_suggestion_provider.dart';
 import 'providers/auth_provider.dart';
@@ -19,6 +21,8 @@ import 'repositories/category_repository.dart';
 import 'repositories/pet_repository.dart';
 import 'repositories/saving_goal_repository.dart';
 import 'repositories/saving_streak_repository.dart';
+import 'repositories/sync_push_repository.dart';
+import 'repositories/sync_repository.dart';
 import 'repositories/transaction_repository.dart';
 import 'repositories/transfer_repository.dart';
 import 'repositories/wallet_repository.dart';
@@ -59,6 +63,14 @@ class _AppState extends State<App> {
         Provider(create: (_) => BudgetRepository(database)),
         Provider(create: (_) => PetRepository(database)),
         Provider(create: (_) => SavingStreakRepository(database)),
+        Provider(
+          create: (_) => SyncPushRepository(
+            SyncRepository(database),
+            (body) async => (await ApiClient.instance
+                    .post(ApiEndpoints.syncPush, body: body))
+                as Map<String, dynamic>,
+          ),
+        ),
         Provider(create: (_) => AiSuggestionRepository(database)),
 
         // Auth is the root provider everything else depends on.
