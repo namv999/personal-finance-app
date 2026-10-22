@@ -21,14 +21,12 @@ class ApiEndpoints {
   /// Overridable at build time: `--dart-define=API_BASE_URL=https://api.example.com`
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://api.your-domain.com/api/v1',
+    defaultValue: 'http://10.0.2.2:8080',
   );
 
   // --- Auth ---
   static const String login = '/auth/login';
   static const String register = '/auth/register';
-  static const String refreshToken = '/auth/refresh';
-  static const String me = '/auth/me';
 
   // --- Core resources (standard REST: GET/POST list, GET/PUT/DELETE {id}) ---
   static const String wallets = '/wallets';

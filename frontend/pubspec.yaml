@@ -1,10 +1,10 @@
 name: personal_finance_app
 description: "Personal Finance Management App — Flutter + SQLite (offline-first), ready to sync with a Spring Boot backend."
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -30,6 +30,9 @@ dependencies:
 
   # Future Spring Boot REST/sync integration
   http: ^1.2.1
+
+  # HTTP client with interceptors for auth, logging, etc. (replaces http package once Spring Boot auth is wired in)
+  dio: ^5.11.1
 
   # Password hashing for local (offline) auth — replaced by backend-issued
   # JWT once Spring Boot auth is wired in
