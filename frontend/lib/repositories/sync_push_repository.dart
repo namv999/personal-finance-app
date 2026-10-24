@@ -65,6 +65,7 @@ class SyncPushRepository {
         }
 
         final synced = <String>[];
+        final rejected = <PushReject>[];
         final results = (response['results'] as List).cast<Map>();
         for (final raw in results) {
           final record = Map<String, dynamic>.from(raw);
@@ -80,18 +81,26 @@ class SyncPushRepository {
               result.skippedNewer++;
               synced.add(key);
               break;
-            default:
+            case 'REJECTED':
+              final reason = (record['reason'] as String?) ?? 'INVALID';
               result.rejected.add(PushRejection(
-                  table,
-                  id,
-                  '${record['reason']}',
-                  record['message'] as String?));
+                  table, id, reason, record['message'] as String?));
+              rejected.add((table: table, id: id, reason: reason));
+              break;
+            default:
+              // Treat an unrecognized result as invalid so its queue entry
+              // does not become a permanent retry loop.
+              const reason = 'INVALID';
+              result.rejected.add(PushRejection(
+                  table, id, reason, record['message'] as String?));
+              rejected.add((table: table, id: id, reason: reason));
               break;
           }
         }
         // Persist progress after every successful chunk. If a later chunk
         // fails, its parents have already been sent before its children.
         await _sync.markSynced(batch, synced);
+        await _sync.handleRejected(userId, batch, rejected);
       }
     } finally {
       _running = false;

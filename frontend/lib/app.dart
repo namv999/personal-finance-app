@@ -28,6 +28,7 @@ import 'repositories/transfer_repository.dart';
 import 'repositories/wallet_repository.dart';
 import 'routes/app_router.dart';
 import 'repositories/sync_pull_repository.dart';
+import 'repositories/sync_service.dart';
 
 /// A placeholder id used only before a user logs in. Every real screen is
 /// route-guarded behind authentication, so per-user providers below never
@@ -51,6 +52,37 @@ class _AppState extends State<App> {
   late final WalletProvider _walletProvider =
       WalletProvider(_walletRepository, _noUser);
   late final router = buildRouter(_authProvider, _walletProvider);
+  late final SyncPushRepository _syncPush = SyncPushRepository(
+    SyncRepository(widget.database),
+    (body) async => (await ApiClient.instance
+        .post(ApiEndpoints.syncPush, body: body)) as Map<String, dynamic>,
+  );
+  late final SyncPullRepository _syncPull = SyncPullRepository(
+    SyncRepository(widget.database),
+    widget.database,
+    (query) async => (await ApiClient.instance
+        .get(ApiEndpoints.syncPull, query: query)) as Map<String, dynamic>,
+  );
+  late final SyncService _syncService = SyncService(_syncPush, _syncPull);
+
+  @override
+  void initState() {
+    super.initState();
+    _authProvider.onLoggedIn = _pullAfterLogin;
+  }
+
+  Future<void> _pullAfterLogin(String userId) async {
+    try {
+      final db = widget.database;
+      final n = Sqflite.firstIntValue(await db.rawQuery(
+              'SELECT COUNT(*) FROM wallets WHERE user_id = ?', [userId])) ??
+          0;
+      if (n == 0) await SyncRepository(db).saveCursor(userId, '0');
+      await _syncService.syncAll(userId);
+    } catch (_) {
+      // A sync failure should not prevent the user from logging in.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,23 +99,9 @@ class _AppState extends State<App> {
         Provider(create: (_) => BudgetRepository(database)),
         Provider(create: (_) => PetRepository(database)),
         Provider(create: (_) => SavingStreakRepository(database)),
-        Provider(
-          create: (_) => SyncPushRepository(
-            SyncRepository(database),
-            (body) async => (await ApiClient.instance
-                    .post(ApiEndpoints.syncPush, body: body))
-                as Map<String, dynamic>,
-          ),
-        ),
-        Provider(
-          create: (_) => SyncPullRepository(
-            SyncRepository(database),
-            database,
-            (query) async => (await ApiClient.instance
-                    .get(ApiEndpoints.syncPull, query: query))
-                as Map<String, dynamic>,
-          ),
-        ),
+        Provider.value(value: _syncPush),
+        Provider.value(value: _syncPull),
+        Provider.value(value: _syncService),
         Provider(create: (_) => AiSuggestionRepository(database)),
 
         // Auth is the root provider everything else depends on.

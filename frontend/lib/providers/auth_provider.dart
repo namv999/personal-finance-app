@@ -12,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   AppUser? currentUser;
   String? errorMessage;
   bool isLoading = false;
+  Future<void> Function(String userId)? onLoggedIn;
 
   Future<void> bootstrap() async {
     try {
@@ -27,7 +28,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> login(String email, String password) => _guard(() async {
-        currentUser = await _repo.login(email: email, password: password);
+        final user = await _repo.login(email: email, password: password);
+        await onLoggedIn?.call(user.id);
+        currentUser = user;
         status = AuthStatus.authenticated;
       });
 

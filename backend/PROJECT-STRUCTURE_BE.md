@@ -27,10 +27,12 @@ backend/
     │   │   └── sync/
     │   │       ├── ServerVersionService.java
     │   │       ├── SyncController.java
+    │   │       ├── SyncPullService.java
     │   │       ├── SyncPushService.java
     │   │       ├── dto/
     │   │       │   ├── CategoryDto.java
     │   │       │   ├── MonthlyBudgetDto.java
+    │   │       │   ├── PullResponse.java
     │   │       │   ├── PushRequest.java
     │   │       │   ├── PushResponse.java
     │   │       │   ├── PushResult.java

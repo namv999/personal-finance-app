@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/network/api_endpoints.dart';
-import '../../models/category.dart';
 import '../../providers/auth_provider.dart';
-import '../../repositories/transaction_repository.dart';
-import '../../repositories/sync_push_repository.dart';
-import '../../repositories/wallet_repository.dart';
 import '../../providers/category_provider.dart';
 import '../../repositories/sync_pull_repository.dart';
+import '../../repositories/sync_service.dart';
 import '../../core/utils/ledger_refresh.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -22,8 +18,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _seedingBatch = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,97 +37,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text('Backend: ${ApiEndpoints.baseUrl}'),
           ),
           ListTile(
-            leading: const Icon(Icons.playlist_add),
-            title: const Text('Tạo 600 giao dịch kiểm thử'),
-            subtitle: Text(_seedingBatch
-                ? 'Đang tạo dữ liệu kiểm thử…'
-                : 'Thu nhập 1 VND/giao dịch; chỉ nhấn một lần'),
-            onTap: () async {
-              if (_seedingBatch) return;
-              setState(() => _seedingBatch = true);
-              try {
-                final userId = context.read<AuthProvider>().currentUser?.id;
-                if (userId == null) return;
-                final wallets =
-                    await context.read<WalletRepository>().getAll(userId);
-                if (wallets.isEmpty) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Tạo hoặc đồng bộ một ví trước')));
-                  }
-                  return;
-                }
-                final transactions = context.read<TransactionRepository>();
-                final today = DateTime.now();
-                for (var i = 0; i < 600; i++) {
-                  await transactions.create(
-                    userId: userId,
-                    walletId: wallets.first.id,
-                    type: CategoryType.income,
-                    amount: 1,
-                    note: 'P2.6b batch test ${i + 1}',
-                    transactionDate: today,
-                  );
-                }
-                const message =
-                    'Đã tạo 600 giao dịch kiểm thử. Nhấn Push để đồng bộ.';
-                debugPrint(message);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(const SnackBar(content: Text(message)));
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Tạo dữ liệu thất bại: $e')));
-                }
-              } finally {
-                if (mounted) setState(() => _seedingBatch = false);
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.upload_outlined),
-            title: const Text('Push dữ liệu đang chờ (debug)'),
+            leading: const Icon(Icons.sync),
+            title: const Text('Đồng bộ ngay'),
             onTap: () async {
               final userId = context.read<AuthProvider>().currentUser?.id;
               if (userId == null) return;
-              final result =
-                  await context.read<SyncPushRepository>().push(userId);
-              final message = result.skippedNoToken
-                  ? 'Bỏ qua: chưa có token đăng nhập online'
-                  : 'applied=${result.applied}, skipped=${result.skippedNewer}, '
-                      'rejected=${result.rejected.length}, err=${result.error}, '
-                      '401=${result.unauthorized}';
-              debugPrint(message);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.download_outlined),
-            title: const Text('Pull dữ liệu từ server (debug)'),
-            onTap: () async {
-              final userId = context.read<AuthProvider>().currentUser?.id;
-              if (userId == null) return;
-              final result =
-                  await context.read<SyncPullRepository>().pull(userId);
+              final out = await context.read<SyncService>().syncAll(userId);
               if (!context.mounted) return;
-              if (result.ok && !result.skippedNoToken) {
+              if (out.ok) {
                 await context.read<CategoryProvider>().load();
                 if (!context.mounted) return;
                 await LedgerRefresh.all(context).run();
+                if (!context.mounted) return;
               }
-              if (!context.mounted) return;
-              final message = result.skippedNoToken
-                  ? 'Bỏ qua: chưa có token đăng nhập online'
-                  : 'pages=${result.pages}, received=${result.received}, '
-                      'cursor=${result.cursor}, err=${result.error}, '
-                      '401=${result.unauthorized}';
+              final p = out.push;
+              final message = out.error == 'NO_TOKEN'
+                  ? 'Cần đăng nhập online để đồng bộ'
+                  : out.unauthorized
+                      ? 'Phiên hết hạn, cần đăng nhập lại để đồng bộ'
+                      : out.error != null
+                          ? 'Lỗi đồng bộ: ${out.error}'
+                          : 'Push: ${p?.applied} ok, ${p?.skippedNewer} bỏ qua, '
+                              '${p?.rejected.length} từ chối. Pull: ${out.pull?.received} bản ghi';
               debugPrint(message);
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
