@@ -11,10 +11,58 @@ servers:
 tags:
   - name: Auth
   - name: Sync
+  - name: Transactions
 security:
   - bearerAuth: []
 
 paths:
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: Tìm kiếm giao dịch của người dùng đang đăng nhập
+      description: |
+        Chỉ trả giao dịch chưa xóa của user trong JWT. Tìm kiếm theo ghi chú không phân biệt hoa thường;
+        ký tự đặc biệt của LIKE (% _ [) được coi là ký tự thường. Tìm kiếm phân biệt dấu tiếng Việt.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/TxType' }
+        - name: wallet_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: min_amount
+          in: query
+          schema: { type: integer, format: int64, minimum: 1 }
+        - name: max_amount
+          in: query
+          schema: { type: integer, format: int64, minimum: 1 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Trang giao dịch khớp bộ lọc, sắp xếp ngày giảm dần
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransactionPage' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /auth/register:
     post:
       tags: [Auth]
@@ -158,6 +206,35 @@ components:
       properties:
         token: { type: string }
         user: { $ref: '#/components/schemas/UserInfo' }
+
+    TransactionPage:
+      type: object
+      required: [items, page, size, total_elements, total_pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TransactionItem' }
+        page: { type: integer }
+        size: { type: integer }
+        total_elements: { type: integer, format: int64 }
+        total_pages: { type: integer }
+
+    TransactionItem:
+      type: object
+      required: [id, user_id, updated_at, is_deleted, wallet_id, type, amount, source, transaction_date, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        updated_at: { type: string, format: date-time }
+        is_deleted: { type: boolean }
+        wallet_id: { type: string, format: uuid }
+        category_id: { type: string, format: uuid, nullable: true }
+        type: { $ref: '#/components/schemas/TxType' }
+        amount: { type: integer, format: int64 }
+        note: { type: string, nullable: true }
+        source: { type: string }
+        transaction_date: { type: string, format: date }
+        created_at: { type: string, format: date-time }
 
     UserInfo:
       type: object
