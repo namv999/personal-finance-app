@@ -21,8 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SyncPullService {
     private static final int MAX_LIMIT = 500;
-    private static final DateTimeFormatter TS =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withZone(ZoneOffset.UTC);
 
     private final WalletRepository wallets;
     private final CategoryRepository categories;
@@ -57,7 +57,12 @@ public class SyncPullService {
         var b = budgets.findByUserIdAndServerVersionGreaterThanOrderByServerVersionAsc(uid, cursor, page);
 
         List<Long> all = new ArrayList<>();
-        versions(all, w); versions(all, c); versions(all, g); versions(all, t); versions(all, f); versions(all, b);
+        versions(all, w);
+        versions(all, c);
+        versions(all, g);
+        versions(all, t);
+        versions(all, f);
+        versions(all, b);
         Collections.sort(all);
         boolean hasMore = all.size() > limit;
         long cutoff = all.isEmpty() ? cursor : all.get(Math.min(limit, all.size()) - 1);
@@ -70,18 +75,22 @@ public class SyncPullService {
     }
 
     private static void versions(List<Long> out, List<? extends SyncEntity> rows) {
-        for (SyncEntity entity : rows) out.add(entity.getServerVersion());
+        for (SyncEntity entity : rows)
+            out.add(entity.getServerVersion());
     }
 
     private static <E extends SyncEntity, D> List<D> cut(List<E> rows, long cutoff, Function<E, D> map) {
         return rows.stream().filter(entity -> entity.getServerVersion() <= cutoff).map(map).toList();
     }
 
-    private static String ts(Instant value) { return value == null ? null : TS.format(value); }
+    private static String ts(Instant value) {
+        return value == null ? null : TS.format(value);
+    }
 
     private static PullResponse.WalletRow walletRow(Wallet e) {
         return new PullResponse.WalletRow(e.getId(), e.getUserId(), e.getWalletName(), e.getWalletType(),
-                e.getOpeningBalance(), e.getColor(), e.getIcon(), ts(e.getUpdatedAt()), e.isDeleted(), e.getServerVersion());
+                e.getOpeningBalance(), e.getColor(), e.getIcon(), ts(e.getUpdatedAt()), e.isDeleted(),
+                e.getServerVersion());
     }
 
     private static PullResponse.CategoryRow categoryRow(Category e) {
@@ -91,18 +100,21 @@ public class SyncPullService {
 
     private static PullResponse.GoalRow goalRow(SavingGoal e) {
         return new PullResponse.GoalRow(e.getId(), e.getUserId(), e.getWalletId(), e.getGoalName(), e.getTargetAmount(),
-                e.getExpectedCompletionDate(), e.getStatus(), ts(e.getUpdatedAt()), e.isDeleted(), e.getServerVersion());
+                e.getExpectedCompletionDate(), e.getStatus(), ts(e.getUpdatedAt()), e.isDeleted(),
+                e.getServerVersion());
     }
 
     private static PullResponse.TransactionRow transactionRow(com.pfm.backend.sync.entity.Transaction e) {
-        return new PullResponse.TransactionRow(e.getId(), e.getUserId(), e.getWalletId(), e.getCategoryId(), e.getType(),
+        return new PullResponse.TransactionRow(e.getId(), e.getUserId(), e.getWalletId(), e.getCategoryId(),
+                e.getType(),
                 e.getAmount(), e.getNote(), e.getSource(), e.getTransactionDate(), ts(e.getCreatedAt()),
                 ts(e.getUpdatedAt()), e.isDeleted(), e.getServerVersion());
     }
 
     private static PullResponse.TransferRow transferRow(Transfer e) {
         return new PullResponse.TransferRow(e.getId(), e.getUserId(), e.getSourceWalletId(), e.getDestinationWalletId(),
-                e.getGoalId(), e.getAmount(), e.getTransferDate(), e.getNote(), ts(e.getUpdatedAt()), e.isDeleted(), e.getServerVersion());
+                e.getGoalId(), e.getAmount(), e.getTransferDate(), e.getNote(), ts(e.getUpdatedAt()), e.isDeleted(),
+                e.getServerVersion());
     }
 
     private static PullResponse.BudgetRow budgetRow(MonthlyBudget e) {

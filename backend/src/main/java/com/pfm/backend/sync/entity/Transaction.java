@@ -1,4 +1,5 @@
 package com.pfm.backend.sync.entity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -7,7 +8,11 @@ import java.time.LocalDate;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
-@Entity @Table(name = "transactions") @Getter @Setter
+
+@Entity
+@Table(name = "transactions")
+@Getter
+@Setter
 public class Transaction extends SyncEntity {
     private UUID walletId;
     private UUID categoryId;

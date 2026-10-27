@@ -58,7 +58,7 @@ class TransactionSearchIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void likeSpecialCharsAreLiteral() throws Exception {
-        for (String query : new String[] {"%", "_", "["}) {
+        for (String query : new String[] { "%", "_", "[" }) {
             mvc.perform(search().param("q", query)).andExpect(status().isOk())
                     .andExpect(jsonPath("$.total_elements").value(0));
         }
@@ -73,7 +73,8 @@ class TransactionSearchIntegrationTest extends AbstractIntegrationTest {
     @Test
     void filterByDateRange() throws Exception {
         mvc.perform(search().param("from", today.minusDays(1).toString()).param("to", today.minusDays(1).toString()))
-                .andExpect(jsonPath("$.total_elements").value(1)).andExpect(jsonPath("$.items[0].amount").value(120000));
+                .andExpect(jsonPath("$.total_elements").value(1))
+                .andExpect(jsonPath("$.items[0].amount").value(120000));
     }
 
     @Test
@@ -85,14 +86,15 @@ class TransactionSearchIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void otherWalletAndOtherUserSeeNothing() throws Exception {
-        mvc.perform(search().param("wallet_id", UUID.randomUUID().toString())).andExpect(jsonPath("$.total_elements").value(0));
+        mvc.perform(search().param("wallet_id", UUID.randomUUID().toString()))
+                .andExpect(jsonPath("$.total_elements").value(0));
         mvc.perform(get("/transactions").with(as(registerUser()))).andExpect(jsonPath("$.total_elements").value(0));
     }
 
     @Test
     void invalidParamsReturn400() throws Exception {
-        String[][] bad = {{"type", "FOO"}, {"size", "0"}, {"size", "101"}, {"page", "-1"},
-                {"wallet_id", "abc"}, {"from", "2026-13-45"}, {"min_amount", "0"}};
+        String[][] bad = { { "type", "FOO" }, { "size", "0" }, { "size", "101" }, { "page", "-1" },
+                { "wallet_id", "abc" }, { "from", "2026-13-45" }, { "min_amount", "0" } };
         for (String[] parameter : bad) {
             mvc.perform(search().param(parameter[0], parameter[1])).andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));

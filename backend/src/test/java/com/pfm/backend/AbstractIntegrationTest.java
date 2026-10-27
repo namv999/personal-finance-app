@@ -29,11 +29,13 @@ import org.springframework.web.context.WebApplicationContext;
 public abstract class AbstractIntegrationTest {
     protected static final ZoneId VN = ZoneId.of("Asia/Ho_Chi_Minh");
     protected static final String CAT_FOOD = "00000000-0000-4000-8000-000000000003";
-    private static final DateTimeFormatter TS =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withZone(ZoneOffset.UTC);
 
-    @Autowired WebApplicationContext ctx;
-    @Value("${spring.datasource.url}") String dbUrl;
+    @Autowired
+    WebApplicationContext ctx;
+    @Value("${spring.datasource.url}")
+    String dbUrl;
     protected MockMvc mvc;
 
     @BeforeEach
@@ -66,7 +68,8 @@ public abstract class AbstractIntegrationTest {
     protected String walletJson(UUID id, String updatedAt, boolean deleted) {
         return """
                 {"id":"%s","updated_at":"%s","is_deleted":%s,"wallet_name":"Ví test","wallet_type":"SPENDING","opening_balance":0}
-                """.formatted(id, updatedAt, deleted);
+                """
+                .formatted(id, updatedAt, deleted);
     }
 
     protected String txJson(UUID id, UUID walletId, String type, long amount, String note,
@@ -74,6 +77,7 @@ public abstract class AbstractIntegrationTest {
         String cat = categoryId == null ? "null" : "\"" + categoryId + "\"";
         return """
                 {"id":"%s","updated_at":"%s","is_deleted":%s,"wallet_id":"%s","category_id":%s,"type":"%s","amount":%d,"note":"%s","source":"MANUAL","transaction_date":"%s"}
-                """.formatted(id, ts(30), deleted, walletId, cat, type, amount, note, date);
+                """
+                .formatted(id, ts(30), deleted, walletId, cat, type, amount, note, date);
     }
 }

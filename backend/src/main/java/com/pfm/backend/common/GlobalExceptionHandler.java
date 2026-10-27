@@ -10,7 +10,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    public record ErrorResponse(String code, String message) {}
+    public record ErrorResponse(String code, String message) {
+    }
 
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ErrorResponse> api(ApiException e) {
@@ -20,7 +21,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> invalid(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
-            .findFirst().map(f -> f.getField() + ": " + f.getDefaultMessage()).orElse("Dữ liệu không hợp lệ");
+                .findFirst().map(f -> f.getField() + ": " + f.getDefaultMessage()).orElse("Dữ liệu không hợp lệ");
         return ResponseEntity.badRequest().body(new ErrorResponse("VALIDATION_FAILED", message));
     }
 
@@ -31,7 +32,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     ResponseEntity<ErrorResponse> parameterType(MethodArgumentTypeMismatchException e) {
-        return ResponseEntity.badRequest().body(new ErrorResponse("VALIDATION_FAILED", "Tham số không hợp lệ: " + e.getName()));
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse("VALIDATION_FAILED", "Tham số không hợp lệ: " + e.getName()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

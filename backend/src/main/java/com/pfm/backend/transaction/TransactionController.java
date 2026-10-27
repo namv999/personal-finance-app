@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransactionController {
     private final TransactionQueryService service;
 
-    public TransactionController(TransactionQueryService service) { this.service = service; }
+    public TransactionController(TransactionQueryService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public TransactionPageResponse list(@AuthenticationPrincipal Jwt jwt,

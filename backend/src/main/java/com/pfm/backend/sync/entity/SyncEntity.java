@@ -9,11 +9,17 @@ import lombok.Getter;
 import lombok.Setter;
 
 @MappedSuperclass
-@Getter @Setter
+@Getter
+@Setter
 public abstract class SyncEntity {
-    @Id private UUID id;
-    @Column(name = "user_id") private UUID userId;
-    @Column(name = "updated_at", nullable = false) private Instant updatedAt;
-    @Column(name = "is_deleted", nullable = false) private boolean deleted;
-    @Column(name = "server_version", nullable = false) private long serverVersion;
+    @Id
+    private UUID id;
+    @Column(name = "user_id")
+    private UUID userId;
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted;
+    @Column(name = "server_version", nullable = false)
+    private long serverVersion;
 }

@@ -24,10 +24,10 @@ public class JwtService {
     public String issue(UUID userId) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
-            .subject(userId.toString())
-            .issuedAt(now)
-            .expiresAt(now.plus(expiresDays, ChronoUnit.DAYS))
-            .build();
+                .subject(userId.toString())
+                .issuedAt(now)
+                .expiresAt(now.plus(expiresDays, ChronoUnit.DAYS))
+                .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }

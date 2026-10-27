@@ -35,14 +35,15 @@ public class AuthService {
         }
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         User user = users.save(new User(req.id(), req.fullName().trim(), email,
-            encoder.encode(req.password()), now));
+                encoder.encode(req.password()), now));
         return toResponse(user);
     }
 
     public AuthResponse login(LoginRequest req) {
         String email = req.email().trim().toLowerCase(java.util.Locale.ROOT);
         User user = users.findByEmailAndDeletedFalse(email).orElseThrow(this::invalid);
-        if (!encoder.matches(req.password(), user.getPasswordHash())) throw invalid();
+        if (!encoder.matches(req.password(), user.getPasswordHash()))
+            throw invalid();
         return toResponse(user);
     }
 
@@ -52,6 +53,6 @@ public class AuthService {
 
     private AuthResponse toResponse(User user) {
         return new AuthResponse(jwt.issue(user.getId()),
-            new UserInfo(user.getId(), user.getFullName(), user.getEmail()));
+                new UserInfo(user.getId(), user.getFullName(), user.getEmail()));
     }
 }

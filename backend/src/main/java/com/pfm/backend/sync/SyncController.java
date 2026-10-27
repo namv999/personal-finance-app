@@ -18,10 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class SyncController {
     private final SyncPushService pushService;
     private final SyncPullService pullService;
+
     public SyncController(SyncPushService pushService, SyncPullService pullService) {
         this.pushService = pushService;
         this.pullService = pullService;
     }
+
     @PostMapping("/push")
     public PushResponse push(@AuthenticationPrincipal Jwt jwt, @RequestBody PushRequest req) {
         return pushService.push(UUID.fromString(jwt.getSubject()), req);

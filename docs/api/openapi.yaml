@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Personal Finance API
-  version: 1.0.1
+  version: 1.2.0
   description: |
     Hợp đồng API duy nhất giữa Flutter và Spring Boot (Phase 2: auth và sync).
     JSON snake_case theo tên cột; updated_at là UTC ISO-8601 mili-giây hậu tố Z;
@@ -12,10 +12,43 @@ tags:
   - name: Auth
   - name: Sync
   - name: Transactions
+  - name: AI
 security:
   - bearerAuth: []
 
 paths:
+  /ai/parse-text:
+    post:
+      tags: [AI]
+      summary: Phân tích tin nhắn thành đề xuất giao dịch
+      description: |
+        Tối đa 10 tin mỗi request. Server không lưu nội dung và che dữ liệu nhạy cảm trước khi gọi AI.
+        Danh mục không hợp lệ hoặc khác loại giao dịch được trả về dưới dạng null.
+        Ngày thiếu, sai định dạng hoặc ở tương lai được đặt thành hôm nay theo Asia/Ho_Chi_Minh.
+        Lỗi từng tin nằm trong results, không làm hỏng cả request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ParseTextRequest' }
+      responses:
+        '200':
+          description: Kết quả theo thứ tự request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ParseTextResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: AI_RATE_LIMITED, client giữ NEEDS_AI và thử lại sau
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: AI_UNAVAILABLE, client giữ NEEDS_AI và thử lại sau
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /transactions:
     get:
       tags: [Transactions]
@@ -177,6 +210,55 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   schemas:
+    ParseTextRequest:
+      type: object
+      required: [items, categories]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [ref, source, content]
+            properties:
+              ref: { type: string, format: uuid }
+              source: { type: string, enum: [SMS, TEXT] }
+              content: { type: string, minLength: 1, maxLength: 1000 }
+        categories:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [id, category_name, type]
+            properties:
+              id: { type: string, format: uuid }
+              category_name: { type: string, maxLength: 100 }
+              type: { $ref: '#/components/schemas/TxType' }
+
+    ParseTextResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            required: [ref, status]
+            properties:
+              ref: { type: string, format: uuid }
+              status: { type: string, enum: [PARSED, NOT_A_TRANSACTION, FAILED] }
+              suggestion:
+                type: object
+                nullable: true
+                required: [amount, type, transaction_date, confidence]
+                properties:
+                  amount: { type: integer, format: int64, minimum: 1 }
+                  type: { $ref: '#/components/schemas/TxType' }
+                  transaction_date: { type: string, format: date }
+                  note: { type: string, nullable: true }
+                  category_id: { type: string, format: uuid, nullable: true }
+                  confidence: { type: number, minimum: 0, maximum: 1 }
     ErrorResponse:
       type: object
       required: [code, message]

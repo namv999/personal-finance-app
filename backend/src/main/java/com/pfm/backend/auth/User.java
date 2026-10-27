@@ -31,7 +31,8 @@ public class User {
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted;
 
-    protected User() {}
+    protected User() {
+    }
 
     public User(UUID id, String fullName, String email, String passwordHash, Instant now) {
         this.id = id;
@@ -42,8 +43,19 @@ public class User {
         this.updatedAt = now;
     }
 
-    public UUID getId() { return id; }
-    public String getFullName() { return fullName; }
-    public String getEmail() { return email; }
-    public String getPasswordHash() { return passwordHash; }
+    public UUID getId() {
+        return id;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
 }
