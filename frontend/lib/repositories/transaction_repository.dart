@@ -53,6 +53,7 @@ class TransactionRepository {
     required int amount,
     String? note,
     required DateTime transactionDate,
+    TransactionSource source = TransactionSource.manual,
   }) async {
     if (amount <= 0) throw Exception('Số tiền phải lớn hơn 0');
     ensureNotFuture(transactionDate);
@@ -62,23 +63,24 @@ class TransactionRepository {
           walletId: walletId,
           categoryId: categoryId,
           type: type);
-    final tx = FinanceTransaction(
-      id: IdGenerator.next(),
-      userId: userId,
-      walletId: walletId,
-      categoryId: categoryId,
-      type: type,
-      amount: amount,
-      note: note,
-      transactionDate: transactionDate,
-      createdAt: nowUtc(),
-      updatedAt: nowUtc(),
-    );
-    await e.insert(Tables.transactions, tx.toMap());
-    await SyncRepository(e).enqueue(
-        tableName: Tables.transactions,
-        recordId: tx.id,
-        action: SyncAction.create);
+      final tx = FinanceTransaction(
+        id: IdGenerator.next(),
+        userId: userId,
+        walletId: walletId,
+        categoryId: categoryId,
+        type: type,
+        amount: amount,
+        note: note,
+        transactionDate: transactionDate,
+        createdAt: nowUtc(),
+        updatedAt: nowUtc(),
+        source: source,
+      );
+      await e.insert(Tables.transactions, tx.toMap());
+      await SyncRepository(e).enqueue(
+          tableName: Tables.transactions,
+          recordId: tx.id,
+          action: SyncAction.create);
       await WalletRepository(e).recomputeBalance(walletId);
       await SavingStreakRepository(e).recompute(userId);
       return tx;
@@ -124,19 +126,23 @@ class TransactionRepository {
           walletId: tx.walletId,
           categoryId: tx.categoryId,
           type: tx.type);
-      await e.update(Tables.transactions, {
-        'wallet_id': tx.walletId,
-        'category_id': tx.categoryId,
-        'type': tx.type.value,
-        'amount': tx.amount,
-        'note': tx.note,
-        'transaction_date': dateOnly(tx.transactionDate),
-        'updated_at': nowUtcIso(),
-      }, where: 'id = ?', whereArgs: [tx.id]);
-    await SyncRepository(e).enqueue(
-        tableName: Tables.transactions,
-        recordId: tx.id,
-        action: SyncAction.update);
+      await e.update(
+          Tables.transactions,
+          {
+            'wallet_id': tx.walletId,
+            'category_id': tx.categoryId,
+            'type': tx.type.value,
+            'amount': tx.amount,
+            'note': tx.note,
+            'transaction_date': dateOnly(tx.transactionDate),
+            'updated_at': nowUtcIso(),
+          },
+          where: 'id = ?',
+          whereArgs: [tx.id]);
+      await SyncRepository(e).enqueue(
+          tableName: Tables.transactions,
+          recordId: tx.id,
+          action: SyncAction.update);
       final wallets = WalletRepository(e);
       if (oldWalletId != tx.walletId) {
         await wallets.recomputeBalance(oldWalletId);
@@ -147,24 +153,24 @@ class TransactionRepository {
   }
 
   Future<void> delete(String id, String walletId) => _db.inTxn((e) async {
-    final rows = await e.query(Tables.transactions,
-        columns: ['wallet_id', 'user_id'],
-        where: 'id = ? AND is_deleted = 0',
-        whereArgs: [id],
-        limit: 1);
-    if (rows.isEmpty) return;
-    await e.update(Tables.transactions,
-        {'is_deleted': 1, 'updated_at': nowUtcIso()},
-        where: 'id = ?', whereArgs: [id]);
-    await SyncRepository(e).enqueue(
-        tableName: Tables.transactions,
-        recordId: id,
-        action: SyncAction.delete);
-    await WalletRepository(e)
-        .recomputeBalance(rows.first['wallet_id'] as String);
-    await SavingStreakRepository(e)
-        .recompute(rows.first['user_id'] as String);
-  });
+        final rows = await e.query(Tables.transactions,
+            columns: ['wallet_id', 'user_id'],
+            where: 'id = ? AND is_deleted = 0',
+            whereArgs: [id],
+            limit: 1);
+        if (rows.isEmpty) return;
+        await e.update(
+            Tables.transactions, {'is_deleted': 1, 'updated_at': nowUtcIso()},
+            where: 'id = ?', whereArgs: [id]);
+        await SyncRepository(e).enqueue(
+            tableName: Tables.transactions,
+            recordId: id,
+            action: SyncAction.delete);
+        await WalletRepository(e)
+            .recomputeBalance(rows.first['wallet_id'] as String);
+        await SavingStreakRepository(e)
+            .recompute(rows.first['user_id'] as String);
+      });
 
   /// Sum of income/expense for a user within [from, to], grouped by type.
   Future<Map<CategoryType, int>> getTotalsByType(
@@ -173,11 +179,7 @@ class TransactionRepository {
       SELECT type, COALESCE(SUM(amount), 0) as total FROM ${Tables.transactions}
       WHERE user_id = ? AND is_deleted = 0 AND transaction_date BETWEEN ? AND ?
       GROUP BY type
-    ''', [
-      userId,
-      dateOnly(from),
-      dateOnly(to)
-    ]);
+    ''', [userId, dateOnly(from), dateOnly(to)]);
 
     final result = {CategoryType.income: 0, CategoryType.expense: 0};
     for (final row in rows) {

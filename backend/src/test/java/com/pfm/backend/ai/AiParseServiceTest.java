@@ -21,7 +21,7 @@ class AiParseServiceTest {
     ParseTextRequest req(int n) {
         List<Item> items = new ArrayList<>();
         for (int i = 0; i < n; i++)
-            items.add(new Item(UUID.randomUUID(), Source.SMS, "TK ****1234 -50,000 VND"));
+            items.add(new Item("ref-" + i, Source.SMS, "TK ****1234 -50,000 VND"));
         return new ParseTextRequest(items,
                 List.of(new Cat(FOOD, "Ăn uống", "EXPENSE"), new Cat(SALARY, "Lương", "INCOME")));
     }

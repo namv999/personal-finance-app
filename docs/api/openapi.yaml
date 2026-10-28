@@ -3,7 +3,7 @@ info:
   title: Personal Finance API
   version: 1.2.0
   description: |
-    Hợp đồng API duy nhất giữa Flutter và Spring Boot (Phase 2: auth và sync).
+    Hợp đồng API duy nhất giữa Flutter và Spring Boot (auth, sync, tìm kiếm giao dịch và phân tích tin nhắn AI).
     JSON snake_case theo tên cột; updated_at là UTC ISO-8601 mili-giây hậu tố Z;
     ngày nghiệp vụ yyyy-MM-dd; tiền là số nguyên VND; UUID viết thường.
 servers:
@@ -222,7 +222,7 @@ components:
             type: object
             required: [ref, source, content]
             properties:
-              ref: { type: string, format: uuid }
+              ref: { type: string, minLength: 1, maxLength: 100 }
               source: { type: string, enum: [SMS, TEXT] }
               content: { type: string, minLength: 1, maxLength: 1000 }
         categories:
@@ -246,7 +246,7 @@ components:
             type: object
             required: [ref, status]
             properties:
-              ref: { type: string, format: uuid }
+              ref: { type: string, minLength: 1, maxLength: 100 }
               status: { type: string, enum: [PARSED, NOT_A_TRANSACTION, FAILED] }
               suggestion:
                 type: object
@@ -256,7 +256,7 @@ components:
                   amount: { type: integer, format: int64, minimum: 1 }
                   type: { $ref: '#/components/schemas/TxType' }
                   transaction_date: { type: string, format: date }
-                  note: { type: string, nullable: true }
+                  note: { type: string, nullable: true, maxLength: 80 }
                   category_id: { type: string, format: uuid, nullable: true }
                   confidence: { type: number, minimum: 0, maximum: 1 }
     ErrorResponse:

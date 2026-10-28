@@ -9,7 +9,7 @@ public record ParseTextResponse(List<Result> results) {
         PARSED, NOT_A_TRANSACTION, FAILED
     }
 
-    public record Result(UUID ref, Status status, Suggestion suggestion) {
+    public record Result(String ref, Status status, Suggestion suggestion) {
     }
 
     public record Suggestion(long amount, String type, LocalDate transactionDate, String note, UUID categoryId,

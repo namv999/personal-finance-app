@@ -13,6 +13,8 @@ import '../screens/categories/category_form_screen.dart';
 import '../screens/categories/category_list_screen.dart';
 import '../screens/home/home_shell.dart';
 import '../screens/pet/pet_screen.dart';
+import '../screens/pending/paste_message_screen.dart';
+import '../screens/pending/pending_inbox_screen.dart';
 import '../screens/saving_goals/saving_goal_detail_screen.dart';
 import '../screens/saving_goals/saving_goal_form_screen.dart';
 import '../screens/saving_goals/saving_goal_list_screen.dart';
@@ -132,6 +134,12 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
       GoRoute(
           path: AppRoutes.aiSuggestions,
           builder: (c, s) => const AiSuggestionScreen()),
+      GoRoute(
+          path: AppRoutes.pendingInbox,
+          builder: (c, s) => const PendingInboxScreen()),
+      GoRoute(
+          path: AppRoutes.pasteMessage,
+          builder: (c, s) => const PasteMessageScreen()),
       GoRoute(
           path: AppRoutes.settings, builder: (c, s) => const SettingsScreen()),
       GoRoute(

@@ -1,6 +1,6 @@
 # Backend: cấu trúc và file Java
 
-Cập nhật theo code hiện có: Phase 2 (P2.1–P2.7) đã hoàn thành. Backend hiện có auth JWT, đồng bộ push/pull và truy vấn giao dịch có lọc/tìm kiếm/phân trang. Endpoint AI trong Phase 3 mới ở mức kế hoạch, chưa có package Java tương ứng.
+Cập nhật theo code hiện tại: backend Spring Boot có auth JWT, đồng bộ push/pull, truy vấn giao dịch và endpoint AI `POST /ai/parse-text`. Endpoint AI che dữ liệu nhạy cảm trước khi gửi Gemini, xác thực kết quả theo từng tin và không lưu nội dung tin nhắn.
 
 ```text
 backend/
@@ -80,20 +80,22 @@ backend/
     │   │   ├── application.yml
     │   │   └── db/migration/
     │   │       ├── V1__init.sql
-    │   │       ├── V2__tx_search_index.sql
-    │   │       └── V3__add_transaction_search_indexes.sql
-    │   └── test/java/com/pfm/backend/
-    │       ├── AbstractIntegrationTest.java
-    │       ├── ai/
-    │       │   ├── AiParseIntegrationTest.java
-    │       │   └── AiParseServiceTest.java
-    │       ├── AuthIntegrationTest.java
-    │       ├── BackendApplicationTests.java
-    │       ├── SyncIntegrationTest.java
-    │       └── TransactionSearchIntegrationTest.java
+    │   │       └── V2__tx_search_index.sql
+    │   └── test/
+    │       ├── java/com/pfm/backend/
+    │       │   ├── AbstractIntegrationTest.java
+    │       │   ├── ai/
+    │       │   │   ├── AiParseErrorIntegrationTest.java
+    │       │   │   ├── AiParseIntegrationTest.java
+    │       │   │   └── AiParseServiceTest.java
+    │       │   ├── AuthIntegrationTest.java
+    │       │   ├── BackendApplicationTests.java
+    │       │   ├── SyncIntegrationTest.java
+    │       │   └── TransactionSearchIntegrationTest.java
+    │       └── resources/application-test.yml
 ```
 
-Các API hiện có: `POST /auth/register`, `POST /auth/login`, `POST /sync/push`, `GET /sync/pull`, `GET /transactions`. Test tích hợp hiện bao phủ auth, sync và transaction search; trạng thái gần nhất trong tài liệu tiến độ là 26 test đã chạy thành công trên SQL Server `pfm_test`.
+Các API chính hiện có: `POST /auth/register`, `POST /auth/login`, `POST /sync/push`, `GET /sync/pull`, `GET /transactions` và `POST /ai/parse-text`. Các API nghiệp vụ yêu cầu JWT; `/ai/parse-text` chấp nhận tối đa 10 tin SMS/TEXT mỗi request và trả `PARSED`, `NOT_A_TRANSACTION` hoặc `FAILED` cho từng tin.
 
-Cây trên liệt kê đầy đủ file Java trong `src/main/java` và `src/test/java` cùng migration SQL đang có. Không hiển thị Maven Wrapper, `target/` và file build sinh tự động.
+Cây trên liệt kê file Java trong `src/main/java`, test Java và cấu hình test, cùng migration SQL đang có. Không hiển thị Maven Wrapper, `target/` và file build sinh tự động.
 

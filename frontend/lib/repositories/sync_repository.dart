@@ -291,7 +291,9 @@ class SyncRepository {
                 whereArgs: [remote['id']],
                 limit: 1);
             if (local.isNotEmpty &&
-                !_ts(local.first['updated_at']).isBefore(remoteAt)) continue;
+                !_ts(local.first['updated_at']).isBefore(remoteAt)) {
+              continue;
+            }
             if (table == Tables.monthlyBudgets && remote['is_deleted'] == 0) {
               final dup = await e.query(table,
                   columns: ['id', 'updated_at'],

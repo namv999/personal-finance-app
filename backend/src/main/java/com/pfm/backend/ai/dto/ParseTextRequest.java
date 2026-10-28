@@ -12,7 +12,8 @@ public record ParseTextRequest(
         SMS, TEXT
     }
 
-    public record Item(@NotNull UUID ref, @NotNull Source source, @NotBlank @Size(max = 1000) String content) {
+    public record Item(@NotBlank @Size(max = 100) String ref, @NotNull Source source,
+            @NotBlank @Size(max = 1000) String content) {
     }
 
     public record Cat(@NotNull UUID id, @NotBlank @Size(max = 100) String categoryName,

@@ -10,6 +10,7 @@ import 'providers/auth_provider.dart';
 import 'providers/budget_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/pet_streak_provider.dart';
+import 'providers/pending_provider.dart';
 import 'providers/saving_goal_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/transfer_provider.dart';
@@ -19,6 +20,7 @@ import 'repositories/auth_repository.dart';
 import 'repositories/budget_repository.dart';
 import 'repositories/category_repository.dart';
 import 'repositories/pet_repository.dart';
+import 'repositories/pending_transaction_repository.dart';
 import 'repositories/saving_goal_repository.dart';
 import 'repositories/saving_streak_repository.dart';
 import 'repositories/sync_push_repository.dart';
@@ -98,6 +100,7 @@ class _AppState extends State<App> {
         Provider(create: (_) => SavingGoalRepository(database)),
         Provider(create: (_) => BudgetRepository(database)),
         Provider(create: (_) => PetRepository(database)),
+        Provider(create: (_) => PendingTransactionRepository(database)),
         Provider(create: (_) => SavingStreakRepository(database)),
         Provider.value(value: _syncPush),
         Provider.value(value: _syncPull),
@@ -180,6 +183,17 @@ class _AppState extends State<App> {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
             return AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), id)
+              ..load();
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, PendingProvider>(
+          create: (ctx) => PendingProvider(
+              ctx.read<PendingTransactionRepository>(), _noUser),
+          update: (ctx, auth, previous) {
+            final id = auth.currentUser?.id ?? _noUser;
+            if (previous != null && previous.userId == id) return previous;
+            return PendingProvider(
+                ctx.read<PendingTransactionRepository>(), id)
               ..load();
           },
         ),

@@ -1,6 +1,6 @@
 # Frontend: cấu trúc và file Dart
 
-Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; Phase 2 đã có đăng nhập online/offline, sync push/pull và xử lý kết quả bị từ chối. Các màn AI suggestion/model/provider đã có trong app, nhưng luồng nhập văn bản/SMS và endpoint AI phía backend vẫn thuộc kế hoạch Phase 3.
+Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; Phase 2 có auth và đồng bộ hai chiều. P3.2 hiện có luồng dán tin nhắn, che dữ liệu, phân tích qua backend, duyệt đề xuất và tạo transaction chính thức khi người dùng xác nhận.
 
 ```text
 frontend/
@@ -26,12 +26,15 @@ frontend/
 │   │       ├── formatters.dart
 │   │       ├── id_generator.dart
 │   │       ├── ledger_refresh.dart
+│   │       ├── text_masker.dart
+│   │       ├── text_masker_test.dart
 │   │       └── validators.dart
 │   ├── models/
 │   │   ├── ai_suggestion.dart
 │   │   ├── category.dart
 │   │   ├── monthly_budget.dart
 │   │   ├── pet.dart
+│   │   ├── pending_transaction.dart
 │   │   ├── saving_goal.dart
 │   │   ├── saving_streak.dart
 │   │   ├── sync_queue_item.dart
@@ -45,6 +48,7 @@ frontend/
 │   │   ├── budget_provider.dart
 │   │   ├── category_provider.dart
 │   │   ├── pet_streak_provider.dart
+│   │   ├── pending_provider.dart
 │   │   ├── saving_goal_provider.dart
 │   │   ├── transaction_provider.dart
 │   │   ├── transfer_provider.dart
@@ -56,6 +60,7 @@ frontend/
 │   │   ├── category_repository.dart
 │   │   ├── derived_recompute.dart
 │   │   ├── pet_repository.dart
+│   │   ├── pending_transaction_repository.dart
 │   │   ├── saving_goal_repository.dart
 │   │   ├── saving_streak_repository.dart
 │   │   ├── sync_pull_repository.dart
@@ -82,6 +87,9 @@ frontend/
 │   │   │   ├── home_shell.dart
 │   │   │   └── more_menu_screen.dart
 │   │   ├── pet/pet_screen.dart
+│   │   ├── pending/
+│   │   │   ├── paste_message_screen.dart
+│   │   │   └── pending_inbox_screen.dart
 │   │   ├── saving_goals/
 │   │   │   ├── saving_goal_detail_screen.dart
 │   │   │   ├── saving_goal_form_screen.dart
@@ -109,7 +117,9 @@ frontend/
 │       └── wallet_delete_dialog.dart
 └── test/
     ├── budget_status_bar_test.dart
+    ├── pending_screens_test.dart
     ├── sync_repository_test.dart
+    ├── text_masker_test.dart
     ├── wallet_delete_dialog_test.dart
     └── widget_test.dart
 ```

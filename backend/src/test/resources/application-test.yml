@@ -1,3 +1,5 @@
+# ..\personal-finance-app\backend\src\test\resources\application-test.yml
+
 spring:
   datasource:
     url: ${TEST_DB_URL}

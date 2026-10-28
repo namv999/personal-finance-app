@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/pending_provider.dart';
 
 class MoreMenuScreen extends StatelessWidget {
   const MoreMenuScreen({super.key});
@@ -10,13 +11,27 @@ class MoreMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
+    final pendingCount = context.watch<PendingProvider>().pendingCount;
     final items = <_MenuItem>[
-      _MenuItem(Icons.swap_horiz, 'Chuyển khoản', 'Chuyển tiền giữa các ví', AppRoutes.transfers),
-      _MenuItem(Icons.category_outlined, 'Danh mục', 'Quản lý danh mục thu/chi', AppRoutes.categories),
-      _MenuItem(Icons.pie_chart_outline, 'Ngân sách', 'Hạn mức chi tiêu theo tháng', AppRoutes.budgets),
-      _MenuItem(Icons.pets, 'Thú cưng', 'Chăm sóc thú cưng tiết kiệm', AppRoutes.pet),
-      _MenuItem(Icons.auto_awesome_outlined, 'Gợi ý AI', 'Lời khuyên tài chính hàng tháng', AppRoutes.aiSuggestions),
-      _MenuItem(Icons.settings_outlined, 'Cài đặt', 'Tài khoản & tùy chọn', AppRoutes.settings),
+      _MenuItem(Icons.swap_horiz, 'Chuyển khoản', 'Chuyển tiền giữa các ví',
+          AppRoutes.transfers),
+      _MenuItem(Icons.category_outlined, 'Danh mục', 'Quản lý danh mục thu/chi',
+          AppRoutes.categories),
+      _MenuItem(Icons.pie_chart_outline, 'Ngân sách',
+          'Hạn mức chi tiêu theo tháng', AppRoutes.budgets),
+      _MenuItem(
+          Icons.pets, 'Thú cưng', 'Chăm sóc thú cưng tiết kiệm', AppRoutes.pet),
+      _MenuItem(Icons.auto_awesome_outlined, 'Gợi ý AI',
+          'Lời khuyên tài chính hàng tháng', AppRoutes.aiSuggestions),
+      _MenuItem(Icons.inbox_outlined, 'Hộp thư chờ duyệt',
+          'Kiểm tra đề xuất giao dịch', AppRoutes.pendingInbox),
+      _MenuItem(
+          Icons.content_paste,
+          'Dán tin nhắn',
+          'Tạo đề xuất từ SMS hoặc nội dung đã sao chép',
+          AppRoutes.pasteMessage),
+      _MenuItem(Icons.settings_outlined, 'Cài đặt', 'Tài khoản & tùy chọn',
+          AppRoutes.settings),
     ];
 
     return Scaffold(
@@ -36,7 +51,19 @@ class MoreMenuScreen extends StatelessWidget {
               leading: Icon(item.icon),
               title: Text(item.title),
               subtitle: Text(item.subtitle),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: item.route == AppRoutes.pendingInbox
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Badge.count(
+                          count: pendingCount,
+                          isLabelVisible: pendingCount > 0,
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    )
+                  : const Icon(Icons.chevron_right),
               onTap: () => context.push(item.route),
             ),
         ],
