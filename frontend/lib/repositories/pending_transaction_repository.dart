@@ -36,7 +36,7 @@ class PendingTransactionRepository {
 
   /// Saves only masked content. Returns null for duplicate source text.
   Future<PendingTransaction?> addRaw(String userId, String raw,
-      {PendingSource source = PendingSource.text}) async {
+      {PendingSource source = PendingSource.text, DateTime? receivedAt}) async {
     final normalized = raw.trim();
     if (normalized.isEmpty || normalized.length > maxContentLength) {
       throw ArgumentError('Tin nhắn phải có từ 1 đến $maxContentLength ký tự');
@@ -51,7 +51,11 @@ class PendingTransactionRepository {
     );
     if (duplicate.isNotEmpty) return null;
 
-    final maskedContent = TextMasker.mask(normalized);
+    // Keep hashing the original message so pasted and scanned copies deduplicate.
+    final withDate = receivedAt == null
+        ? normalized
+        : 'Nhận ngày ${_ymd(receivedAt.toLocal())}: $normalized';
+    final maskedContent = TextMasker.mask(withDate);
     final boundedMaskedContent = String.fromCharCodes(
       maskedContent.runes.take(maxContentLength),
     );
@@ -80,6 +84,9 @@ class PendingTransactionRepository {
     }
     return pending;
   }
+
+  static String _ymd(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   /// Sends up to ten NEEDS_AI items. Request timeout is longer because the
   /// backend may retry Gemini and switch to its fallback model.

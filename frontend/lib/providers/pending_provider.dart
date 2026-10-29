@@ -1,10 +1,22 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/sms/bank_sms_filter.dart';
+import '../core/sms/sms_reader.dart';
 import '../models/category.dart';
 import '../models/pending_transaction.dart';
 import '../repositories/pending_transaction_repository.dart';
 
 enum PasteOutcome { invalid, duplicate, parsed, queued }
+
+enum SmsScanStatus { done, denied, permanentlyDenied, busy, error }
+
+class SmsScanResult {
+  final SmsScanStatus status;
+  final int found;
+  final int added;
+
+  const SmsScanResult(this.status, {this.found = 0, this.added = 0});
+}
 
 class PendingProvider extends ChangeNotifier {
   final PendingTransactionRepository _repository;
@@ -65,6 +77,61 @@ class PendingProvider extends ChangeNotifier {
     try {
       lastRun = await _repository.processNeedsAi(userId);
       await load();
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
+  /// Scans only after an explicit user action and adds at most [maxNew] messages.
+  Future<SmsScanResult> scanSms({int maxNew = 30}) async {
+    if (_busy) return const SmsScanResult(SmsScanStatus.busy);
+    _busy = true;
+    notifyListeners();
+    try {
+      var permission = await SmsReader.status();
+      if (permission != SmsPermission.granted) {
+        permission = await SmsReader.request();
+      }
+      if (permission == SmsPermission.permanentlyDenied) {
+        return const SmsScanResult(SmsScanStatus.permanentlyDenied);
+      }
+      if (permission != SmsPermission.granted) {
+        return const SmsScanResult(SmsScanStatus.denied);
+      }
+
+      final inbox = await SmsReader.readInbox();
+      final candidates = inbox
+          .where((sms) => BankSmsFilter.looksLikeTransaction(sms.body))
+          .toList();
+      var added = 0;
+      for (final sms in candidates) {
+        if (added >= maxNew) break;
+        try {
+          final item = await _repository.addRaw(
+            userId,
+            sms.body,
+            source: PendingSource.sms,
+            receivedAt: sms.date,
+          );
+          if (item != null) added++;
+        } on ArgumentError {
+          continue;
+        }
+      }
+      await load();
+
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final before = needsAi.length;
+        if (before == 0) break;
+        lastRun = await _repository.processNeedsAi(userId);
+        await load();
+        if (lastRun != AiRunResult.done || needsAi.length >= before) break;
+      }
+      return SmsScanResult(SmsScanStatus.done,
+          found: candidates.length, added: added);
+    } catch (_) {
+      return const SmsScanResult(SmsScanStatus.error);
     } finally {
       _busy = false;
       notifyListeners();

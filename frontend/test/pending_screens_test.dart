@@ -80,6 +80,10 @@ class FakePendingProvider extends ChangeNotifier implements PendingProvider {
   }
 
   @override
+  Future<SmsScanResult> scanSms({int maxNew = 30}) async =>
+      const SmsScanResult(SmsScanStatus.done);
+
+  @override
   Future<void> confirm({
     required String pendingId,
     required String walletId,

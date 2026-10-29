@@ -44,6 +44,12 @@ dependencies:
   # Dashboard charts (spending by category, etc.)
   fl_chart: ^0.68.0
 
+  # SMS inbox access for OTP verification (Android only)
+  flutter_sms_inbox: ^1.0.5
+
+  # Permission handling for camera, storage, etc. (Android & iOS)
+  permission_handler: ^13.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

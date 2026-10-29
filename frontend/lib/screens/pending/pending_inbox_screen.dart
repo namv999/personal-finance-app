@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/sms/sms_reader.dart';
 import '../../core/utils/clock.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/ledger_refresh.dart';
@@ -13,6 +15,7 @@ import '../../models/wallet.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/pending_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../repositories/pending_transaction_repository.dart';
 import '../../widgets/empty_state.dart';
 
 class PendingInboxScreen extends StatefulWidget {
@@ -37,6 +40,81 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
 
   Future<void> _refresh() async {
     await context.read<PendingProvider>().retryNeedsAi();
+  }
+
+  Future<void> _scanSms() async {
+    final provider = context.read<PendingProvider>();
+    if (await SmsReader.status() != SmsPermission.granted) {
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Quét tin nhắn ngân hàng'),
+          content: const Text(
+            'Ứng dụng chỉ đọc SMS khi bạn bấm quét, chỉ lấy tin giống giao dịch '
+            'trong 30 ngày gần đây. Số tài khoản, số thẻ, số điện thoại và số dư '
+            'được che trước khi gửi phân tích. Nội dung gốc không được lưu.\n\n'
+            'Bạn vẫn có thể dán tin nhắn thủ công mà không cần cấp quyền.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Để sau'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Tiếp tục'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    final result = await provider.scanSms();
+    if (!mounted) return;
+    switch (result.status) {
+      case SmsScanStatus.busy:
+        break;
+      case SmsScanStatus.denied:
+        _show('Chưa cấp quyền đọc SMS. Bạn vẫn có thể dán tin nhắn.');
+        break;
+      case SmsScanStatus.permanentlyDenied:
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Quyền SMS đang bị chặn.'),
+              action: SnackBarAction(
+                label: 'Mở cài đặt',
+                onPressed: openAppSettings,
+              ),
+            ),
+          );
+        break;
+      case SmsScanStatus.error:
+        _show('Không đọc được SMS. Thử lại hoặc dùng cách dán tin nhắn.');
+        break;
+      case SmsScanStatus.done:
+        _show(_scanMessage(provider, result));
+        break;
+    }
+  }
+
+  String _scanMessage(PendingProvider provider, SmsScanResult result) {
+    if (result.added == 0) {
+      return 'Không có tin giao dịch mới trong 30 ngày gần đây';
+    }
+    final base = 'Thêm ${result.added} tin giao dịch';
+    switch (provider.lastRun) {
+      case AiRunResult.offline:
+        return '$base. Chưa có mạng, sẽ phân tích sau';
+      case AiRunResult.rateLimited:
+      case AiRunResult.unavailable:
+        return '$base. AI đang quá tải, bấm Thử lại sau';
+      default:
+        return base;
+    }
   }
 
   void _show(String message) {
@@ -96,6 +174,13 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hộp thư chờ duyệt'),
+        actions: [
+          IconButton(
+            tooltip: 'Quét SMS',
+            icon: const Icon(Icons.sms_outlined),
+            onPressed: provider.busy ? null : _scanSms,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('paste_message_fab'),
