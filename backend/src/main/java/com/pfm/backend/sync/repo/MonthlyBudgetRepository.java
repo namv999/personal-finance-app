@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
 
 public interface MonthlyBudgetRepository extends JpaRepository<MonthlyBudget, UUID> {
+    List<MonthlyBudget> findByUserIdAndMonthAndDeletedFalse(UUID userId, String month);
     List<MonthlyBudget> findByUserIdAndCategoryIdAndMonthAndDeletedFalse(UUID userId, UUID categoryId, String month);
 
     List<MonthlyBudget> findByUserIdAndServerVersionGreaterThanOrderByServerVersionAsc(UUID userId, long serverVersion,

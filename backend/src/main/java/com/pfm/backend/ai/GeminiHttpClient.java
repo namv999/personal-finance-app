@@ -42,6 +42,11 @@ public class GeminiHttpClient implements GeminiClient {
   }
 
   public String generateJson(String systemPrompt, String userPrompt) {
+    return generateJson(systemPrompt, userPrompt, SCHEMA);
+  }
+
+  @Override
+  public String generateJson(String systemPrompt, String userPrompt, Map<String, Object> schema) {
     if (apiKey == null || apiKey.isBlank()) {
       log.error("Thiếu GEMINI_API_KEY");
       throw unavailable();
@@ -52,7 +57,7 @@ public class GeminiHttpClient implements GeminiClient {
     ApiException last = null;
     for (int i = 0; i < models.length; i++) {
       try {
-        return callOnce(models[i], systemPrompt, userPrompt);
+        return callOnce(models[i], systemPrompt, userPrompt, schema);
       } catch (ApiException e) {
         if (!"AI_UNAVAILABLE".equals(e.getCode()))
           throw e;
@@ -70,10 +75,10 @@ public class GeminiHttpClient implements GeminiClient {
     throw last == null ? unavailable() : last;
   }
 
-  private String callOnce(String modelName, String systemPrompt, String userPrompt) {
+  private String callOnce(String modelName, String systemPrompt, String userPrompt, Map<String, Object> schema) {
     Map<String, Object> body = Map.of("systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))),
         "contents", List.of(Map.of("role", "user", "parts", List.of(Map.of("text", userPrompt)))),
-        "generationConfig", Map.of("temperature", 0, "responseMimeType", "application/json", "responseSchema", SCHEMA));
+        "generationConfig", Map.of("temperature", 0, "responseMimeType", "application/json", "responseSchema", schema));
     try {
       Map<?, ?> response = http.post().uri("/models/{model}:generateContent", modelName)
           .header("x-goog-api-key", apiKey)

@@ -26,6 +26,12 @@ class AiPeriod {
     return AiPeriod(type, DateTime(normalized.year, normalized.month, 1),
         DateTime(normalized.year, normalized.month + 1, 0));
   }
+
+  factory AiPeriod.next(AiPeriodType type) {
+    final current = AiPeriod.of(type);
+    final nextDay = DateTime(current.end.year, current.end.month, current.end.day + 1);
+    return AiPeriod.of(type, nextDay);
+  }
 }
 
 class AiSuggestion {
@@ -71,14 +77,4 @@ class AiSuggestion {
         'created_at': toUtcIso(createdAt),
       };
 
-  factory AiSuggestion.fromJson(Map<String, dynamic> json) => AiSuggestion(
-        id: json['id'],
-        userId: json['userId'],
-        periodType: AiPeriodTypeX.fromValue(json['periodType']),
-        periodStart: DateTime.parse(json['periodStart']),
-        periodEnd: DateTime.parse(json['periodEnd']),
-        suggestionContent: json['suggestionContent'],
-        suggestedData: json['suggestedData'],
-        createdAt: DateTime.parse(json['createdAt']),
-      );
 }

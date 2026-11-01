@@ -1,6 +1,6 @@
 # Frontend: cấu trúc và file Dart
 
-Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; Phase 2 có auth và đồng bộ hai chiều. P3.2 hiện có luồng dán tin nhắn, che dữ liệu, phân tích qua backend, duyệt đề xuất và tạo transaction chính thức khi người dùng xác nhận.
+Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; có auth, đồng bộ hai chiều, phân tích giao dịch từ tin nhắn dán và luồng duyệt đề xuất trước khi tạo transaction. Phần đọc SMS inbox đã có các tiện ích xin quyền, đọc tin gần đây và lọc sơ bộ tin có khả năng là giao dịch.
 
 ```text
 frontend/
@@ -19,6 +19,9 @@ frontend/
 │   │   ├── network/
 │   │   │   ├── api_client.dart
 │   │   │   └── api_endpoints.dart
+│   │   ├── sms/
+│   │   │   ├── bank_sms_filter.dart
+│   │   │   └── sms_reader.dart
 │   │   ├── theme/app_theme.dart
 │   │   └── utils/
 │   │       ├── budget_status.dart
@@ -27,7 +30,6 @@ frontend/
 │   │       ├── id_generator.dart
 │   │       ├── ledger_refresh.dart
 │   │       ├── text_masker.dart
-│   │       ├── text_masker_test.dart
 │   │       └── validators.dart
 │   ├── models/
 │   │   ├── ai_suggestion.dart
@@ -86,7 +88,8 @@ frontend/
 │   │   │   ├── home_screen.dart
 │   │   │   ├── home_shell.dart
 │   │   │   └── more_menu_screen.dart
-│   │   ├── pet/pet_screen.dart
+│   │   ├── pet/
+│   │   │   └── pet_screen.dart
 │   │   ├── pending/
 │   │   │   ├── paste_message_screen.dart
 │   │   │   └── pending_inbox_screen.dart
@@ -124,4 +127,4 @@ frontend/
     └── widget_test.dart
 ```
 
-Cây trên liệt kê toàn bộ file `.dart` hiện có trong `lib/` và `test/`. Các file Dart sinh trong `.dart_tool/` hoặc thư mục build, cùng mã nền tảng Android/iOS/Web/Desktop, không nằm trong cây mã nguồn ứng dụng.
+Cây trên liệt kê các file `.dart` hiện có trong `lib/` và `test/`. Test `TextMasker` được đặt trong `test/` cùng các test khác, không nằm trong mã ứng dụng `lib/`. Các file Dart sinh trong `.dart_tool/` hoặc thư mục build, cùng mã nền tảng Android/iOS/Web/Desktop, không nằm trong cây mã nguồn ứng dụng.

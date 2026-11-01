@@ -177,12 +177,12 @@ class _AppState extends State<App> {
           },
         ),
         ChangeNotifierProxyProvider<AuthProvider, AiSuggestionProvider>(
-          create: (ctx) =>
-              AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), _noUser),
+          create: (ctx) => AiSuggestionProvider(
+              ctx.read<AiSuggestionRepository>(), _syncService, _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), id)
+            return AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), _syncService, id)
               ..load();
           },
         ),
