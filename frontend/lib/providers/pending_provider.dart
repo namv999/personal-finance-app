@@ -83,6 +83,23 @@ class PendingProvider extends ChangeNotifier {
     }
   }
 
+  /// Analyzes an image while sharing the busy state with SMS scanning.
+  Future<ImageRunResult> submitImage(Uint8List bytes) async {
+    if (_busy) return const ImageRunResult(ImageRunStatus.busy);
+    _busy = true;
+    notifyListeners();
+    try {
+      final result = await _repository.processImage(userId, bytes);
+      if (result.status == ImageRunStatus.added) await load();
+      return result;
+    } catch (_) {
+      return const ImageRunResult(ImageRunStatus.error);
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
   /// Scans only after an explicit user action and adds at most [maxNew] messages.
   Future<SmsScanResult> scanSms({int maxNew = 30}) async {
     if (_busy) return const SmsScanResult(SmsScanStatus.busy);

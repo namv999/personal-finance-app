@@ -39,6 +39,7 @@ class ApiEndpoints {
   static const String savingStreaks = '/saving-streaks';
   static const String aiSuggestions = '/ai/suggestions';
   static const String aiParseText = '/ai/parse-text';
+  static const String aiParseImage = '/ai/parse-image';
 
   // --- Offline sync (matches "Tóm tắt luồng đồng bộ" in the design doc) ---
   static const String syncPush = '/sync/push';

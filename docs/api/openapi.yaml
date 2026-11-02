@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Personal Finance API
-  version: 1.3.0
+  version: 1.4.0
   description: |
     Hợp đồng API duy nhất giữa Flutter và Spring Boot (auth, sync, tìm kiếm giao dịch và phân tích tin nhắn AI).
     JSON snake_case theo tên cột; updated_at là UTC ISO-8601 mili-giây hậu tố Z;
@@ -76,6 +76,36 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '503':
           description: AI_UNAVAILABLE, client giữ NEEDS_AI và thử lại sau
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /ai/parse-image:
+    post:
+      tags: [AI]
+      summary: Phân tích ảnh hóa đơn hoặc ảnh chụp tin nhắn thành đề xuất giao dịch
+      description: |
+        Một ảnh mỗi request, tối đa 3MB sau khi giải mã base64 (jpeg, png hoặc webp).
+        Server không lưu ảnh và không ghi log nội dung. Ghi chú AI trả về được che số nhạy cảm.
+        Hóa đơn nhiều món được ghi nhận thành một giao dịch theo tổng tiền.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ParseImageRequest' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ParseImageResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: AI_RATE_LIMITED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: AI_UNAVAILABLE
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -305,6 +335,38 @@ components:
                   note: { type: string, nullable: true, maxLength: 80 }
                   category_id: { type: string, format: uuid, nullable: true }
                   confidence: { type: number, minimum: 0, maximum: 1 }
+    ParseImageRequest:
+      type: object
+      required: [image_base64, mime_type, categories]
+      properties:
+        image_base64: { type: string, maxLength: 4200000 }
+        mime_type: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        categories:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [id, category_name, type]
+            properties:
+              id: { type: string, format: uuid }
+              category_name: { type: string, maxLength: 100 }
+              type: { $ref: '#/components/schemas/TxType' }
+    ParseImageResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [PARSED, NOT_A_TRANSACTION, FAILED] }
+        suggestion:
+          type: object
+          nullable: true
+          required: [amount, type, transaction_date, confidence]
+          properties:
+            amount: { type: integer, format: int64, minimum: 1 }
+            type: { $ref: '#/components/schemas/TxType' }
+            transaction_date: { type: string, format: date }
+            note: { type: string, nullable: true, maxLength: 80 }
+            category_id: { type: string, format: uuid, nullable: true }
+            confidence: { type: number, minimum: 0, maximum: 1 }
     ErrorResponse:
       type: object
       required: [code, message]

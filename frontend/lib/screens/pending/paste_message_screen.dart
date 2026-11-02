@@ -55,14 +55,14 @@ class _PasteMessageScreenState extends State<PasteMessageScreen> {
             _ => 'Tin vẫn được lưu trên máy để thử lại sau.',
           };
           _show(message);
-          context.go(AppRoutes.pendingInbox);
+          _returnToInbox();
           break;
       }
     } on NetworkException {
       if (mounted) {
         _show(
             'Đang offline. Tin vẫn được lưu trên máy để phân tích khi có mạng.');
-        context.go(AppRoutes.pendingInbox);
+        _returnToInbox();
       }
     } catch (e) {
       if (mounted) {
@@ -71,6 +71,11 @@ class _PasteMessageScreenState extends State<PasteMessageScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  void _returnToInbox() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
   }
 
   void _show(String message) {

@@ -2,6 +2,8 @@ package com.pfm.backend.ai;
 
 import com.pfm.backend.ai.dto.ParseTextRequest;
 import com.pfm.backend.ai.dto.ParseTextResponse;
+import com.pfm.backend.ai.dto.ParseImageRequest;
+import com.pfm.backend.ai.dto.ParseImageResponse;
 import com.pfm.backend.ai.dto.SuggestionRequest;
 import com.pfm.backend.ai.dto.SuggestionResponse;
 import jakarta.validation.Valid;
@@ -24,6 +26,11 @@ public class AiController {
     @PostMapping("/parse-text")
     public ParseTextResponse parseText(@Valid @RequestBody ParseTextRequest request) {
         return service.parse(request);
+    }
+
+    @PostMapping("/parse-image")
+    public ParseImageResponse parseImage(@Valid @RequestBody ParseImageRequest request) {
+        return service.parseImage(request);
     }
 
     @PostMapping("/suggestions")

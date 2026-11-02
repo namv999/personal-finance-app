@@ -1,9 +1,11 @@
 # Frontend: cấu trúc và file Dart
 
-Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; có auth, đồng bộ hai chiều, phân tích giao dịch từ tin nhắn dán và luồng duyệt đề xuất trước khi tạo transaction. Phần đọc SMS inbox đã có các tiện ích xin quyền, đọc tin gần đây và lọc sơ bộ tin có khả năng là giao dịch.
+Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; có auth, đồng bộ hai chiều, phân tích giao dịch từ tin nhắn dán/ảnh, luồng duyệt đề xuất trước khi tạo transaction và màn gợi ý thu chi AI. Hộp thư chờ duyệt cho phép chụp/chọn ảnh, nén, xin đồng ý trước khi gửi tới backend/Gemini và chỉ lưu đề xuất cùng hash byte ảnh (không lưu ảnh). Ảnh cần mạng, giới hạn 3 MB; hash ảnh giúp phát hiện ảnh trùng theo user. Màn gợi ý giải thích kỳ dự kiến và khoảng ngày dữ liệu. Phần đọc SMS inbox có các tiện ích xin quyền, đọc tin gần đây và lọc sơ bộ tin có khả năng là giao dịch.
 
 ```text
 frontend/
+├── pubspec.yaml
+├── analysis_options.yaml
 ├── lib/
 │   ├── main.dart
 │   ├── app.dart
@@ -119,7 +121,9 @@ frontend/
 │       ├── loading_view.dart
 │       └── wallet_delete_dialog.dart
 └── test/
+    ├── ai_suggestion_screen_test.dart
     ├── budget_status_bar_test.dart
+    ├── image_helpers_test.dart
     ├── pending_screens_test.dart
     ├── sync_repository_test.dart
     ├── text_masker_test.dart
@@ -128,3 +132,5 @@ frontend/
 ```
 
 Cây trên liệt kê các file `.dart` hiện có trong `lib/` và `test/`. Test `TextMasker` được đặt trong `test/` cùng các test khác, không nằm trong mã ứng dụng `lib/`. Các file Dart sinh trong `.dart_tool/` hoặc thư mục build, cùng mã nền tảng Android/iOS/Web/Desktop, không nằm trong cây mã nguồn ứng dụng.
+
+`image_picker` được khai báo trong `pubspec.yaml`. Android manifest khai báo intent camera để image picker mở camera hệ thống; app không yêu cầu quyền `CAMERA` riêng.

@@ -120,11 +120,21 @@ void main() {
         'Card displays suggestion bullet points, creation date, and collapsible data when current exists',
         (tester) async {
       final sampleData = jsonEncode({
+        'period_days': 30,
+        'history_days': 60,
         'avg_expense': 3500000,
         'avg_income': 10000000,
         'top_expense_categories': [
-          {'category_name': 'Ăn uống', 'avg_amount': 1500000, 'share_percent': 43},
-          {'category_name': 'Di chuyển', 'avg_amount': 500000, 'share_percent': 14},
+          {
+            'category_name': 'Ăn uống',
+            'avg_amount': 1500000,
+            'share_percent': 43
+          },
+          {
+            'category_name': 'Di chuyển',
+            'avg_amount': 500000,
+            'share_percent': 14
+          },
         ],
         'budgets': [
           {
@@ -168,7 +178,11 @@ void main() {
       await tester.tap(find.text('Số liệu'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Top danh mục chi tiêu'), findsOneWidget);
+      expect(
+          find.text(
+              'Ước tính cho tháng tới, dựa trên 60 ngày bạn đã ghi chép.'),
+          findsOneWidget);
+      expect(find.text('Chi nhiều nhất mỗi tháng'), findsOneWidget);
       expect(find.text('Ăn uống'), findsWidgets);
       expect(find.text('Di chuyển'), findsOneWidget);
       expect(find.text('Ngân sách'), findsOneWidget);
@@ -206,20 +220,27 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
 
       // Info card visible
-      expect(find.text('Cần ít nhất 5 giao dịch trải trên 14 ngày.'), findsOneWidget);
+      expect(find.text('Cần ít nhất 5 giao dịch trải trên 14 ngày.'),
+          findsOneWidget);
       expect(find.text('Hãy ghi thêm giao dịch rồi thử lại.'), findsOneWidget);
     });
 
     testWidgets('Error outcomes display expected SnackBar messages',
         (tester) async {
       final cases = [
-        (SuggestStatus.offline, 'Cần kết nối mạng và đăng nhập online để tạo gợi ý'),
+        (
+          SuggestStatus.offline,
+          'Cần kết nối mạng và đăng nhập online để tạo gợi ý'
+        ),
         (SuggestStatus.unauthorized, 'Phiên hết hạn, hãy đăng nhập lại'),
         (
           SuggestStatus.syncFailed,
           'Không đồng bộ được dữ liệu nên chưa thể tạo gợi ý. Thử lại sau'
         ),
-        (SuggestStatus.rateLimited, 'Dịch vụ AI đang quá tải, thử lại sau ít phút'),
+        (
+          SuggestStatus.rateLimited,
+          'Dịch vụ AI đang quá tải, thử lại sau ít phút'
+        ),
         (SuggestStatus.unavailable, 'Dịch vụ AI tạm thời không khả dụng'),
         (SuggestStatus.error, 'Có lỗi, vui lòng thử lại'),
       ];

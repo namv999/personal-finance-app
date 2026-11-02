@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -72,6 +74,10 @@ class FakePendingProvider extends ChangeNotifier implements PendingProvider {
     }
     return nextOutcome;
   }
+
+  @override
+  Future<ImageRunResult> submitImage(Uint8List bytes) async =>
+      const ImageRunResult(ImageRunStatus.error);
 
   @override
   Future<void> retryNeedsAi() async {
@@ -469,9 +475,10 @@ void main() {
       await tester.tap(find.text('Kiểm tra & xác nhận'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Kiểm tra & xác nhận'), findsNWidgets(2)); // Title + Sheet
+      expect(
+          find.text('Kiểm tra & xác nhận'), findsNWidgets(2)); // Title + Sheet
       expect(find.text('Xác nhận'), findsOneWidget);
-      expect(find.text('Bỏ qua'), findsOneWidget);
+      expect(find.text('Bỏ qua'), findsNWidgets(2)); // Card + edit sheet
 
       // Verify wallet balance is NOT displayed
       expect(find.textContaining('500.000'), findsNothing);

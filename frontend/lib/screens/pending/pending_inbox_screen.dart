@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -101,6 +105,105 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
     }
   }
 
+  Future<void> _scanImage() async {
+    final provider = context.read<PendingProvider>();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Chụp ảnh'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Chọn từ thư viện'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    XFile? file;
+    try {
+      // Don't set maxHeight: long receipts need their full vertical detail.
+      file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+    } catch (_) {
+      if (mounted) _show('Không mở được camera hoặc thư viện ảnh.');
+      return;
+    }
+    if (file == null || !mounted) return;
+
+    final path = file.path;
+    try {
+      final agreed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Gửi ảnh để phân tích?'),
+          content: const Text(
+            'Ảnh được gửi qua máy chủ của ứng dụng tới Google Gemini để đọc số tiền, ngày và nội dung. '
+            'Ứng dụng và máy chủ không lưu ảnh sau khi phân tích.\n\n'
+            'Số tài khoản, số điện thoại hay thông tin khác nằm trong ảnh có thể bị gửi đi, '
+            'hãy che trước nếu cần. Cần có kết nối mạng.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Đồng ý gửi'),
+            ),
+          ],
+        ),
+      );
+      if (agreed != true || !mounted) return;
+      final bytes = await file.readAsBytes();
+      final result = await provider.submitImage(bytes);
+      if (mounted) _show(_imageMessage(result.status));
+    } finally {
+      await _deleteTemp(path);
+    }
+  }
+
+  Future<void> _deleteTemp(String path) async {
+    try {
+      final tempPath = (await getTemporaryDirectory()).path;
+      if (path.startsWith(tempPath)) await File(path).delete();
+    } catch (_) {
+      // The picker owns its cache cleanup if this best-effort delete fails.
+    }
+  }
+
+  String _imageMessage(ImageRunStatus status) => switch (status) {
+        ImageRunStatus.added =>
+          'Đã thêm đề xuất từ ảnh. Kiểm tra rồi xác nhận.',
+        ImageRunStatus.duplicate => 'Ảnh này đã được xử lý trước đó.',
+        ImageRunStatus.notTransaction => 'Không nhận ra giao dịch trong ảnh.',
+        ImageRunStatus.failed => 'Chưa đọc được ảnh. Thử ảnh rõ hơn.',
+        ImageRunStatus.offline => 'Cần có mạng để phân tích ảnh.',
+        ImageRunStatus.rateLimited =>
+          'AI đang giới hạn lượt gọi, thử lại sau ít phút.',
+        ImageRunStatus.unavailable =>
+          'Dịch vụ AI tạm thời không khả dụng, thử lại sau.',
+        ImageRunStatus.unauthorized =>
+          'Phiên đăng nhập hết hạn, hãy đăng nhập lại.',
+        ImageRunStatus.tooLarge => 'Ảnh quá lớn (tối đa 3MB). Thử ảnh khác.',
+        ImageRunStatus.unsupported => 'Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.',
+        ImageRunStatus.busy => 'Đang xử lý, đợi một chút.',
+        ImageRunStatus.error => 'Có lỗi, vui lòng thử lại.',
+      };
+
   String _scanMessage(PendingProvider provider, SmsScanResult result) {
     if (result.added == 0) {
       return 'Không có tin giao dịch mới trong 30 ngày gần đây';
@@ -140,6 +243,10 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
       builder: (ctx) => _PendingEditSheet(
         item: item,
         wallets: wallets,
@@ -174,7 +281,18 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hộp thư chờ duyệt'),
+        bottom: provider.busy
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(3),
+                child: LinearProgressIndicator(),
+              )
+            : null,
         actions: [
+          IconButton(
+            tooltip: 'Phân tích ảnh',
+            icon: const Icon(Icons.photo_camera_outlined),
+            onPressed: provider.busy ? null : _scanImage,
+          ),
           IconButton(
             tooltip: 'Quét SMS',
             icon: const Icon(Icons.sms_outlined),
@@ -205,11 +323,6 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
                 children: [
-                  if (provider.busy)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: LinearProgressIndicator(),
-                    ),
                   if (hasPending) ...[
                     _SectionHeader(
                       title: 'Đề xuất cần bạn xác nhận',
@@ -342,11 +455,9 @@ class _PendingItemCard extends StatelessWidget {
                         '${(conf * 100).round()}%',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isLowConfidence
-                              ? const Color(0xFFB45309)
-                              : null,
-                          fontWeight:
-                              isLowConfidence ? FontWeight.bold : null,
+                          color:
+                              isLowConfidence ? const Color(0xFFB45309) : null,
+                          fontWeight: isLowConfidence ? FontWeight.bold : null,
                         ),
                       ),
                       backgroundColor: isLowConfidence
@@ -609,10 +720,10 @@ class _PendingEditSheetState extends State<_PendingEditSheet> {
         .where((c) => c.type == _selectedType && !c.isDeleted)
         .toList();
 
-    final validCategoryId = availableCategories
-            .any((c) => c.id == _selectedCategoryId)
-        ? _selectedCategoryId
-        : null;
+    final validCategoryId =
+        availableCategories.any((c) => c.id == _selectedCategoryId)
+            ? _selectedCategoryId
+            : null;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -623,7 +734,10 @@ class _PendingEditSheetState extends State<_PendingEditSheet> {
       ),
       child: Form(
         key: _formKey,
-        child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -643,110 +757,125 @@ class _PendingEditSheetState extends State<_PendingEditSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              SegmentedButton<CategoryType>(
-                segments: const [
-                  ButtonSegment(
-                    value: CategoryType.expense,
-                    label: Text('Chi tiêu'),
-                    icon: Icon(Icons.north_east),
+              const SizedBox(height: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SegmentedButton<CategoryType>(
+                        segments: const [
+                          ButtonSegment(
+                            value: CategoryType.expense,
+                            label: Text('Chi tiêu'),
+                            icon: Icon(Icons.north_east),
+                          ),
+                          ButtonSegment(
+                            value: CategoryType.income,
+                            label: Text('Thu nhập'),
+                            icon: Icon(Icons.south_west),
+                          ),
+                        ],
+                        selected: {_selectedType},
+                        onSelectionChanged: (set) {
+                          setState(() {
+                            _selectedType = set.first;
+                            if (_selectedCategoryId != null) {
+                              final exists = allCategories.any((c) =>
+                                  c.id == _selectedCategoryId &&
+                                  c.type == _selectedType);
+                              if (!exists) _selectedCategoryId = null;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _amountController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Số tiền *',
+                          border: OutlineInputBorder(),
+                          suffixText: 'VND',
+                        ),
+                        validator: (value) {
+                          final v = int.tryParse(
+                              value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
+                          if (v == null || v <= 0) {
+                            return 'Nhập số tiền lớn hơn 0';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedWalletId,
+                        decoration: const InputDecoration(
+                          labelText: 'Ví *',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          for (final wallet in widget.wallets)
+                            DropdownMenuItem(
+                              value: wallet.id,
+                              child: Text(wallet.walletName),
+                            ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedWalletId = val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String?>(
+                        key: ValueKey(_selectedType),
+                        initialValue: validCategoryId,
+                        decoration: const InputDecoration(
+                          labelText: 'Danh mục',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Không chọn danh mục'),
+                          ),
+                          for (final cat in availableCategories)
+                            DropdownMenuItem<String?>(
+                              value: cat.id,
+                              child: Text(cat.categoryName),
+                            ),
+                        ],
+                        onChanged: (val) =>
+                            setState(() => _selectedCategoryId = val),
+                      ),
+                      const SizedBox(height: 14),
+                      ListTile(
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        title: const Text('Ngày giao dịch'),
+                        subtitle: Text(Formatters.date(_selectedDate)),
+                        trailing: const Icon(Icons.calendar_month),
+                        onTap: _pickDate,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _noteController,
+                        maxLength: 200,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Ghi chú',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   ),
-                  ButtonSegment(
-                    value: CategoryType.income,
-                    label: Text('Thu nhập'),
-                    icon: Icon(Icons.south_west),
-                  ),
-                ],
-                selected: {_selectedType},
-                onSelectionChanged: (set) {
-                  setState(() {
-                    _selectedType = set.first;
-                    if (_selectedCategoryId != null) {
-                      final exists = allCategories.any((c) =>
-                          c.id == _selectedCategoryId &&
-                          c.type == _selectedType);
-                      if (!exists) _selectedCategoryId = null;
-                    }
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Số tiền *',
-                  border: OutlineInputBorder(),
-                  suffixText: 'VND',
-                ),
-                validator: (value) {
-                  final v = int.tryParse(
-                      value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '');
-                  if (v == null || v <= 0) return 'Nhập số tiền lớn hơn 0';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedWalletId,
-                decoration: const InputDecoration(
-                  labelText: 'Ví *',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  for (final wallet in widget.wallets)
-                    DropdownMenuItem(
-                      value: wallet.id,
-                      child: Text(wallet.walletName),
-                    ),
-                ],
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedWalletId = val);
-                },
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String?>(
-                key: ValueKey(_selectedType),
-                initialValue: validCategoryId,
-                decoration: const InputDecoration(
-                  labelText: 'Danh mục',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Không chọn danh mục'),
-                  ),
-                  for (final cat in availableCategories)
-                    DropdownMenuItem<String?>(
-                      value: cat.id,
-                      child: Text(cat.categoryName),
-                    ),
-                ],
-                onChanged: (val) => setState(() => _selectedCategoryId = val),
-              ),
-              const SizedBox(height: 14),
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                title: const Text('Ngày giao dịch'),
-                subtitle: Text(Formatters.date(_selectedDate)),
-                trailing: const Icon(Icons.calendar_month),
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _noteController,
-                maxLength: 200,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Ghi chú',
-                  border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(

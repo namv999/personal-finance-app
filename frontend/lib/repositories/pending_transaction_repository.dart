@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../core/database/db_helper.dart';
@@ -13,6 +16,26 @@ import '../models/transaction.dart';
 import 'transaction_repository.dart';
 
 enum AiRunResult { nothing, done, offline, rateLimited, unavailable, error }
+
+enum ImageRunStatus {
+  added,
+  duplicate,
+  notTransaction,
+  failed,
+  offline,
+  rateLimited,
+  unavailable,
+  unauthorized,
+  tooLarge,
+  unsupported,
+  busy,
+  error,
+}
+
+class ImageRunResult {
+  final ImageRunStatus status;
+  const ImageRunResult(this.status);
+}
 
 class PendingTransactionRepository {
   final DatabaseExecutor _db;
@@ -215,6 +238,170 @@ class PendingTransactionRepository {
       }
     }
     return AiRunResult.done;
+  }
+
+  static const maxImageBytes = 3 * 1024 * 1024;
+
+  /// Detects supported image formats from their signatures.
+  static String? sniffMime(Uint8List bytes) {
+    if (bytes.length < 12) return null;
+    if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+      return 'image/jpeg';
+    }
+    if (bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
+      return 'image/png';
+    }
+    if (bytes[0] == 0x52 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46 &&
+        bytes[3] == 0x46 &&
+        bytes[8] == 0x57 &&
+        bytes[9] == 0x45 &&
+        bytes[10] == 0x42 &&
+        bytes[11] == 0x50) {
+      return 'image/webp';
+    }
+    return null;
+  }
+
+  Future<bool> _imageHashExists(String userId, String hash) async =>
+      (await _db.query(
+        Tables.pendingTransactions,
+        columns: ['id'],
+        where: 'user_id = ? AND source_hash = ?',
+        whereArgs: [userId, hash],
+        limit: 1,
+      ))
+          .isNotEmpty;
+
+  /// Parses one image online. The image itself is never persisted locally.
+  Future<ImageRunResult> processImage(String userId, Uint8List bytes) async {
+    if (bytes.length > maxImageBytes) {
+      return const ImageRunResult(ImageRunStatus.tooLarge);
+    }
+    final mime = sniffMime(bytes);
+    if (mime == null) {
+      return const ImageRunResult(ImageRunStatus.unsupported);
+    }
+    if (!ApiClient.instance.hasToken) {
+      return const ImageRunResult(ImageRunStatus.offline);
+    }
+
+    final hash = TextMasker.hashBytes(userId, bytes);
+    if (await _imageHashExists(userId, hash)) {
+      return const ImageRunResult(ImageRunStatus.duplicate);
+    }
+
+    final categoryRows = await _db.query(
+      Tables.categories,
+      columns: ['id', 'category_name', 'type'],
+      where: 'is_deleted = 0 AND (user_id IS NULL OR user_id = ?)',
+      whereArgs: [userId],
+      orderBy: 'category_name',
+      limit: 100,
+    );
+    final categoryTypes = {
+      for (final category in categoryRows)
+        category['id'] as String: category['type'] as String,
+    };
+
+    dynamic response;
+    try {
+      response = await ApiClient.instance.post(
+        ApiEndpoints.aiParseImage,
+        body: {
+          'image_base64': base64Encode(bytes),
+          'mime_type': mime,
+          'categories': [
+            for (final category in categoryRows)
+              {
+                'id': category['id'],
+                'category_name': category['category_name'],
+                'type': category['type'],
+              },
+          ],
+        },
+        receiveTimeout: const Duration(seconds: 60),
+      );
+    } on NetworkException {
+      return const ImageRunResult(ImageRunStatus.offline);
+    } on ApiException catch (error) {
+      if (error.statusCode == 401) {
+        return const ImageRunResult(ImageRunStatus.unauthorized);
+      }
+      if (error.statusCode == 429 || error.code == 'AI_RATE_LIMITED') {
+        return const ImageRunResult(ImageRunStatus.rateLimited);
+      }
+      if (error.statusCode == 503 || error.code == 'AI_UNAVAILABLE') {
+        return const ImageRunResult(ImageRunStatus.unavailable);
+      }
+      return const ImageRunResult(ImageRunStatus.error);
+    }
+
+    if (response is! Map) return const ImageRunResult(ImageRunStatus.error);
+    final responseStatus = response['status'];
+    if (responseStatus == 'NOT_A_TRANSACTION') {
+      return const ImageRunResult(ImageRunStatus.notTransaction);
+    }
+    final suggestion = response['suggestion'];
+    if (responseStatus != 'PARSED' || suggestion is! Map) {
+      return const ImageRunResult(ImageRunStatus.failed);
+    }
+
+    final rawAmount = suggestion['amount'];
+    if (rawAmount is! num ||
+        !rawAmount.isFinite ||
+        rawAmount <= 0 ||
+        rawAmount % 1 != 0) {
+      return const ImageRunResult(ImageRunStatus.failed);
+    }
+    final type = suggestion['type'];
+    if (type != 'INCOME' && type != 'EXPENSE') {
+      return const ImageRunResult(ImageRunStatus.failed);
+    }
+    final today = businessToday();
+    var date = suggestion['transaction_date'];
+    if (date is! String ||
+        date.length != 10 ||
+        DateTime.tryParse(date) == null ||
+        date.compareTo(today) > 0) {
+      date = today;
+    }
+    final rawCategoryId = suggestion['category_id'];
+    final categoryId =
+        rawCategoryId is String && categoryTypes[rawCategoryId] == type
+            ? rawCategoryId
+            : null;
+    final confidence = suggestion['confidence'];
+    final rawNote = suggestion['note']?.toString().trim();
+
+    final item = PendingTransaction(
+      id: IdGenerator.next(),
+      userId: userId,
+      source: PendingSource.image,
+      maskedContent: '[Ảnh]',
+      amount: rawAmount.toInt(),
+      type: CategoryTypeX.fromValue(type as String),
+      transactionDate: DateTime.parse(date),
+      note: rawNote == null || rawNote.isEmpty ? null : rawNote,
+      suggestedCategoryId: categoryId,
+      confidence: confidence is num ? confidence.toDouble() : null,
+      sourceHash: hash,
+      status: PendingStatus.pending,
+      updatedAt: nowUtc(),
+    );
+    try {
+      await _db.insert(Tables.pendingTransactions, item.toMap());
+    } on DatabaseException {
+      if (await _imageHashExists(userId, hash)) {
+        return const ImageRunResult(ImageRunStatus.duplicate);
+      }
+      rethrow;
+    }
+    return const ImageRunResult(ImageRunStatus.added);
   }
 
   /// Creates the ledger transaction and closes the pending item atomically.

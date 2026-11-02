@@ -161,14 +161,13 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   FilledButton(
-                    onPressed: provider.isRequesting
-                        ? null
-                        : () => _request(context),
+                    onPressed:
+                        provider.isRequesting ? null : () => _request(context),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
                       backgroundColor: AppColors.primary,
                       disabledBackgroundColor:
-                          AppColors.primary.withOpacity(0.12),
+                          AppColors.primary.withValues(alpha: 0.12),
                       disabledForegroundColor: AppColors.primary,
                     ),
                     child: provider.isRequesting
@@ -384,7 +383,8 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
   }
 
   Widget _buildDataSection(BuildContext context, AiSuggestion current) {
-    if (current.suggestedData == null || current.suggestedData!.trim().isEmpty) {
+    if (current.suggestedData == null ||
+        current.suggestedData!.trim().isEmpty) {
       return const SizedBox.shrink();
     }
     Map<String, dynamic>? data;
@@ -427,17 +427,31 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
     final avgExpense = data['avg_expense'];
     final topCategories = data['top_expense_categories'];
     final budgets = data['budgets'];
+    final periodDays = data['period_days'];
+    final historyDays = data['history_days'];
+    final unit = periodDays == 7 ? 'tuần' : 'tháng';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (historyDays is num)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              'Ước tính cho $unit tới, dựa trên ${historyDays.toInt()} ngày bạn đã ghi chép.',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
         if (avgIncome is num || avgExpense is num) ...[
           Row(
             children: [
               if (avgIncome is num)
                 Expanded(
                   child: _buildMetricTile(
-                    label: 'Thu nhập TB',
+                    label: 'Thu nhập dự kiến',
                     value: Formatters.currency(avgIncome),
                     color: AppColors.income,
                   ),
@@ -447,7 +461,7 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
               if (avgExpense is num)
                 Expanded(
                   child: _buildMetricTile(
-                    label: 'Chi tiêu TB',
+                    label: 'Chi tiêu dự kiến',
                     value: Formatters.currency(avgExpense),
                     color: AppColors.expense,
                   ),
@@ -457,11 +471,11 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
           const SizedBox(height: 12),
         ],
         if (topCategories is List && topCategories.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.only(top: 4, bottom: 6),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 6),
             child: Text(
-              'Top danh mục chi tiêu',
-              style: TextStyle(
+              'Chi nhiều nhất mỗi $unit',
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -534,7 +548,7 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.danger.withOpacity(0.1),
+                              color: AppColors.danger.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -573,7 +587,7 @@ class _AiSuggestionScreenState extends State<AiSuggestionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

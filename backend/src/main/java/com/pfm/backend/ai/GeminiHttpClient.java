@@ -2,6 +2,8 @@ package com.pfm.backend.ai;
 
 import com.pfm.backend.common.ApiException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -47,6 +49,17 @@ public class GeminiHttpClient implements GeminiClient {
 
   @Override
   public String generateJson(String systemPrompt, String userPrompt, Map<String, Object> schema) {
+    return generate(systemPrompt, userPrompt, schema, null, null);
+  }
+
+  @Override
+  public String generateJson(String systemPrompt, String userPrompt, Map<String, Object> schema, byte[] image,
+      String mimeType) {
+    return generate(systemPrompt, userPrompt, schema, Base64.getEncoder().encodeToString(image), mimeType);
+  }
+
+  private String generate(String systemPrompt, String userPrompt, Map<String, Object> schema,
+      String imageB64, String mimeType) {
     if (apiKey == null || apiKey.isBlank()) {
       log.error("Thiếu GEMINI_API_KEY");
       throw unavailable();
@@ -57,7 +70,7 @@ public class GeminiHttpClient implements GeminiClient {
     ApiException last = null;
     for (int i = 0; i < models.length; i++) {
       try {
-        return callOnce(models[i], systemPrompt, userPrompt, schema);
+        return callOnce(models[i], systemPrompt, userPrompt, schema, imageB64, mimeType);
       } catch (ApiException e) {
         if (!"AI_UNAVAILABLE".equals(e.getCode()))
           throw e;
@@ -75,9 +88,14 @@ public class GeminiHttpClient implements GeminiClient {
     throw last == null ? unavailable() : last;
   }
 
-  private String callOnce(String modelName, String systemPrompt, String userPrompt, Map<String, Object> schema) {
+  private String callOnce(String modelName, String systemPrompt, String userPrompt, Map<String, Object> schema,
+      String imageB64, String mimeType) {
+    List<Object> parts = new ArrayList<>();
+    if (imageB64 != null)
+      parts.add(Map.of("inline_data", Map.of("mime_type", mimeType, "data", imageB64)));
+    parts.add(Map.of("text", userPrompt));
     Map<String, Object> body = Map.of("systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))),
-        "contents", List.of(Map.of("role", "user", "parts", List.of(Map.of("text", userPrompt)))),
+        "contents", List.of(Map.of("role", "user", "parts", parts)),
         "generationConfig", Map.of("temperature", 0, "responseMimeType", "application/json", "responseSchema", schema));
     try {
       Map<?, ?> response = http.post().uri("/models/{model}:generateContent", modelName)
@@ -91,7 +109,11 @@ public class GeminiHttpClient implements GeminiClient {
         throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_RATE_LIMITED", "Dịch vụ AI đang quá tải, thử lại sau");
       throw unavailable();
     } catch (RestClientException e) {
-      log.warn("Không gọi được Gemini model {}: {}", modelName, e.getMessage());
+      Throwable root = e;
+      while (root.getCause() != null && root.getCause() != root)
+        root = root.getCause();
+      log.warn("Không gọi được Gemini model {}: {} [{}]", modelName, e.getMessage(),
+          root.getClass().getSimpleName());
       throw unavailable();
     }
   }
