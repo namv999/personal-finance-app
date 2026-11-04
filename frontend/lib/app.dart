@@ -4,6 +4,8 @@ import 'package:sqflite/sqflite.dart';
 
 import 'core/network/api_client.dart';
 import 'core/network/api_endpoints.dart';
+import 'core/scheduled/due_gate.dart';
+import 'screens/scheduled/due_dialog.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/ai_suggestion_provider.dart';
 import 'providers/auth_provider.dart';
@@ -11,6 +13,7 @@ import 'providers/budget_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/pet_streak_provider.dart';
 import 'providers/pending_provider.dart';
+import 'providers/scheduled_provider.dart';
 import 'providers/saving_goal_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/transfer_provider.dart';
@@ -22,6 +25,7 @@ import 'repositories/category_repository.dart';
 import 'repositories/pet_repository.dart';
 import 'repositories/pending_transaction_repository.dart';
 import 'repositories/saving_goal_repository.dart';
+import 'repositories/scheduled_transaction_repository.dart';
 import 'repositories/saving_streak_repository.dart';
 import 'repositories/sync_push_repository.dart';
 import 'repositories/sync_repository.dart';
@@ -101,6 +105,7 @@ class _AppState extends State<App> {
         Provider(create: (_) => BudgetRepository(database)),
         Provider(create: (_) => PetRepository(database)),
         Provider(create: (_) => PendingTransactionRepository(database)),
+        Provider(create: (_) => ScheduledTransactionRepository(database)),
         Provider(create: (_) => SavingStreakRepository(database)),
         Provider.value(value: _syncPush),
         Provider.value(value: _syncPull),
@@ -182,7 +187,8 @@ class _AppState extends State<App> {
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return AiSuggestionProvider(ctx.read<AiSuggestionRepository>(), _syncService, id)
+            return AiSuggestionProvider(
+                ctx.read<AiSuggestionRepository>(), _syncService, id)
               ..load();
           },
         ),
@@ -192,9 +198,24 @@ class _AppState extends State<App> {
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
-            return PendingProvider(
-                ctx.read<PendingTransactionRepository>(), id)
+            return PendingProvider(ctx.read<PendingTransactionRepository>(), id)
               ..load();
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, ScheduledProvider>(
+          create: (ctx) => ScheduledProvider(
+            ctx.read<ScheduledTransactionRepository>(),
+            _syncService,
+            _noUser,
+          )..start(),
+          update: (ctx, auth, previous) {
+            final id = auth.currentUser?.id ?? _noUser;
+            if (previous != null && previous.userId == id) return previous;
+            return ScheduledProvider(
+              ctx.read<ScheduledTransactionRepository>(),
+              _syncService,
+              id,
+            )..start();
           },
         ),
       ],
@@ -203,6 +224,12 @@ class _AppState extends State<App> {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         routerConfig: router,
+        builder: (context, child) => DueGate(
+          navigatorKey: rootNavigatorKey,
+          onShowDue: showDueDialog,
+
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

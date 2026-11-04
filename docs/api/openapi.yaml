@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Personal Finance API
-  version: 1.4.0
+  version: 1.5.0
   description: |
     Hợp đồng API duy nhất giữa Flutter và Spring Boot (auth, sync, tìm kiếm giao dịch và phân tích tin nhắn AI).
     JSON snake_case theo tên cột; updated_at là UTC ISO-8601 mili-giây hậu tố Z;
@@ -526,6 +526,24 @@ components:
             month: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
             spending_limit: { type: integer, format: int64, minimum: 1 }
 
+    ScheduledTransactionRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncBase'
+        - type: object
+          required: [wallet_id, type, amount, start_date, time_of_day]
+          properties:
+            wallet_id: { type: string, format: uuid }
+            category_id: { type: string, format: uuid, nullable: true, description: Danh mục đã xóa vẫn nhận, client ghi không danh mục khi xác nhận }
+            type: { $ref: '#/components/schemas/TxType' }
+            amount: { type: integer, format: int64, minimum: 1 }
+            note: { type: string, nullable: true }
+            start_date: { type: string, format: date, description: Mốc tính các kỳ lặp; server không chặn quá khứ }
+            time_of_day: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$', description: Giờ Asia/Ho_Chi_Minh }
+            repeat_unit: { type: string, enum: [DAY, WEEK, MONTH, YEAR], nullable: true, description: null = một lần }
+            repeat_every: { type: integer, minimum: 1, maximum: 365, nullable: true, description: Đi cùng repeat_unit }
+            end_date: { type: string, format: date, nullable: true, description: Chỉ khi có repeat_unit }
+            next_due_date: { type: string, format: date, nullable: true, description: Kỳ chưa xử lý gần nhất, null = hết kỳ }
+
     PushRequest:
       type: object
       required: [records]
@@ -551,6 +569,9 @@ components:
             monthly_budgets:
               type: array
               items: { $ref: '#/components/schemas/MonthlyBudgetRecord' }
+            scheduled_transactions:
+              type: array
+              items: { $ref: '#/components/schemas/ScheduledTransactionRecord' }
 
     PushResponse:
       type: object
@@ -566,7 +587,7 @@ components:
       properties:
         table:
           type: string
-          enum: [wallets, categories, saving_goals, transactions, transfers, monthly_budgets]
+          enum: [wallets, categories, saving_goals, transactions, transfers, monthly_budgets, scheduled_transactions]
         id: { type: string, format: uuid }
         status:
           type: string
@@ -623,6 +644,12 @@ components:
               items:
                 allOf:
                   - $ref: '#/components/schemas/MonthlyBudgetRecord'
+                  - $ref: '#/components/schemas/ServerVersioned'
+            scheduled_transactions:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/ScheduledTransactionRecord'
                   - $ref: '#/components/schemas/ServerVersioned'
         next_cursor: { type: integer, format: int64 }
         has_more: { type: boolean }

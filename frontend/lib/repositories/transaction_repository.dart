@@ -46,6 +46,7 @@ class TransactionRepository {
   }
 
   Future<FinanceTransaction> create({
+    String? id,
     required String userId,
     required String walletId,
     String? categoryId,
@@ -64,7 +65,7 @@ class TransactionRepository {
           categoryId: categoryId,
           type: type);
       final tx = FinanceTransaction(
-        id: IdGenerator.next(),
+        id: id ?? IdGenerator.next(),
         userId: userId,
         walletId: walletId,
         categoryId: categoryId,
@@ -109,6 +110,18 @@ class TransactionRepository {
       throw Exception('Loại danh mục không khớp loại giao dịch');
     }
   }
+
+  /// Shared reference validation for scheduled transactions.
+  Future<void> validateRefs(DatabaseExecutor e,
+          {required String userId,
+          required String walletId,
+          String? categoryId,
+          required CategoryType type}) =>
+      _validateRefs(e,
+          userId: userId,
+          walletId: walletId,
+          categoryId: categoryId,
+          type: type);
 
   Future<void> update(FinanceTransaction tx) async {
     if (tx.amount <= 0) throw Exception('Số tiền phải lớn hơn 0');

@@ -5,6 +5,7 @@ import '../core/network/api_client.dart';
 import 'saving_goal_repository.dart';
 import 'saving_streak_repository.dart';
 import 'sync_repository.dart';
+import 'scheduled_transaction_repository.dart';
 import 'wallet_repository.dart';
 
 class PullResult {
@@ -75,6 +76,7 @@ class SyncPullRepository {
       // Áp dụng và tính lại giá trị suy ra trong CÙNG một transaction
       await _db.inTxn((e) async {
         await SyncRepository(e).applyPulled(userId, merged);
+        await ScheduledTransactionRepository(e).reconcileAfterPull(userId);
         await _recomputeDerived(e, userId);
       });
 

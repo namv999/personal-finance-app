@@ -1,8 +1,8 @@
 # SYNC_RULES
 
 ## Phạm vi
-- Đồng bộ: wallets, categories (user_id NOT NULL), saving_goals, transactions, transfers, monthly_budgets.
-- Không đồng bộ: users (qua /auth/*), pets, saving_streaks, ai_suggestions (cache local kết quả backend trả về), pending_transactions, sync_queue.
+- Đồng bộ: wallets, categories (user_id NOT NULL), saving_goals, transactions, transfers, monthly_budgets, scheduled_transactions.
+- Không đồng bộ: users (qua /auth/*), pets, saving_streaks, ai_suggestions (cache local kết quả backend trả về), pending_transactions, sync_queue. `pending_transactions` vẫn chỉ ở local; giao dịch hẹn trước (`scheduled_transactions`) có đồng bộ.
 - Danh mục hệ thống (user_id NULL): hai phía tự seed cùng UUID, read-only, không push/pull.
 - Không gửi cache: wallets.current_balance, saving_goals.saved_amount. Client tính lại sau pull. Số dư ví = opening_balance + thu - chi + chuyển vào - chuyển ra.
 
@@ -30,11 +30,12 @@
 - KHÔNG validate đủ số dư (hai máy offline có thể làm ví âm sau khi hợp nhất; client chỉ cảnh báo).
 - REJECTED reason: PARENT_DELETED (client soft-delete bản ghi mồ côi, tính lại số dư),
   FUTURE_DATE, INVALID.
+- `scheduled_transactions`: ví cha đã xóa trả `PARENT_DELETED`; danh mục đã xóa vẫn nhận để client xử lý thành không danh mục khi xác nhận. Không chặn `start_date` quá khứ. Kỳ lặp tính từ `start_date`, không cộng dồn từ kỳ trước; ID giao dịch phát sinh là UUID v5 của `scheduledId|ngày kỳ`.
 - monthly_budgets: hợp nhất theo (user_id, category_id, month) đang active; giữ updated_at mới hơn,
   bản còn lại is_deleted = true.
 
 ## GET /sync/pull?cursor=<int64>&limit=500
-- Res: {changes: {wallets: [...], categories: [...], saving_goals: [...], transactions: [...], transfers: [...], monthly_budgets: [...]}, next_cursor, has_more}. Lọc server_version > cursor, theo user từ token.
+- Res: {changes: {wallets: [...], categories: [...], saving_goals: [...], transactions: [...], transfers: [...], monthly_budgets: [...], scheduled_transactions: [...]}, next_cursor, has_more}. Lọc server_version > cursor, theo user từ token.
 - Cursor là số do server cấp, không phải timestamp. Lần đầu cursor = 0.
 - Client gộp mọi trang, áp dụng trong 1 transaction, lưu cursor sau khi thành công.
 - Tham số cursor thay cho since.

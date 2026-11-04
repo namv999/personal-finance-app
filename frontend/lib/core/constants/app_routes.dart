@@ -43,6 +43,10 @@ class AppRoutes {
   static const String pendingInbox = '/pending';
   static const String pasteMessage = '/pending/paste';
 
+  static const String scheduled = '/scheduled';
+  static const String scheduledAdd = '/scheduled/add';
+  static const String scheduledEdit = '/scheduled/edit/:id';
+
   static const String settings = '/settings';
   static const String profile = '/profile';
 
@@ -54,4 +58,5 @@ class AppRoutes {
   static String savingGoalDetailPath(String id) => '/saving-goals/$id';
   static String transferAddForGoalPath(String goalId) =>
       '$transferAdd?goalId=$goalId';
+  static String scheduledEditPath(String id) => '/scheduled/edit/$id';
 }

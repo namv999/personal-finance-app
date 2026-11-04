@@ -110,6 +110,12 @@ class WalletRepository {
                 whereArgs: [id]))
             .map((r) => r['id'] as String)
             .toList();
+        final schedIds = (await e.query(Tables.scheduledTransactions,
+                columns: ['id'],
+                where: 'wallet_id = ? AND is_deleted = 0',
+                whereArgs: [id]))
+            .map((r) => r['id'] as String)
+            .toList();
         await e.update(Tables.transactions, del,
             where: 'wallet_id = ? AND is_deleted = 0', whereArgs: [id]);
         await e.update(Tables.transfers, del,
@@ -117,6 +123,8 @@ class WalletRepository {
                 'is_deleted = 0 AND (source_wallet_id = ? OR destination_wallet_id = ?)',
             whereArgs: [id, id]);
         await e.update(Tables.savingGoals, del,
+            where: 'wallet_id = ? AND is_deleted = 0', whereArgs: [id]);
+        await e.update(Tables.scheduledTransactions, del,
             where: 'wallet_id = ? AND is_deleted = 0', whereArgs: [id]);
         await e.update(Tables.wallets, del, where: 'id = ?', whereArgs: [id]);
 
@@ -132,6 +140,10 @@ class WalletRepository {
         await sync.enqueueMany(
             tableName: Tables.savingGoals,
             recordIds: goalIds,
+            action: SyncAction.delete);
+        await sync.enqueueMany(
+            tableName: Tables.scheduledTransactions,
+            recordIds: schedIds,
             action: SyncAction.delete);
         await sync.enqueueMany(
             tableName: Tables.wallets,
@@ -215,6 +227,10 @@ class WalletRepository {
       WHERE t.is_deleted = 0 AND (t.source_wallet_id = ? OR t.destination_wallet_id = ?)
         AND (g.wallet_id IS NULL OR g.wallet_id <> ?)
     ''', [walletId, walletId, walletId]);
+    final scheduledCount = Sqflite.firstIntValue(await _db.rawQuery(
+            'SELECT COUNT(*) FROM ${Tables.scheduledTransactions} WHERE wallet_id = ? AND is_deleted = 0',
+            [walletId])) ??
+        0;
     return WalletDeletePreview(
       transactionCount: txCount,
       incomeTotal: income,
@@ -229,6 +245,7 @@ class WalletRepository {
           .toList(),
       deletedGoals: deletedGoals.map((r) => r['goal_name'] as String).toList(),
       affectedGoals: affectedGoals.map((r) => r['goal_name'] as String).toList(),
+      scheduledCount: scheduledCount,
     );
   }
 
@@ -260,6 +277,7 @@ class WalletDeletePreview {
   final List<WalletDeleteImpact> counterparts;
   final List<String> deletedGoals;
   final List<String> affectedGoals;
+  final int scheduledCount;
 
   const WalletDeletePreview({
     required this.transactionCount,
@@ -269,5 +287,6 @@ class WalletDeletePreview {
     required this.counterparts,
     required this.deletedGoals,
     required this.affectedGoals,
+    this.scheduledCount = 0,
   });
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'sync_pull_repository.dart';
 import 'sync_push_repository.dart';
 
@@ -12,6 +13,9 @@ class SyncOutcome {
 class SyncService {
   final SyncPushRepository _push;
   final SyncPullRepository _pull;
+
+  /// Incremented after successful pulls so per-user features can refresh.
+  final ValueNotifier<int> pulledTick = ValueNotifier<int>(0);
   bool _running = false;
   SyncService(this._push, this._pull);
 
@@ -45,6 +49,7 @@ class SyncService {
       out.pull = pull;
       out.unauthorized = pull.unauthorized;
       out.error = pull.error;
+      if (pull.ok) pulledTick.value++;
     } finally {
       _running = false;
     }

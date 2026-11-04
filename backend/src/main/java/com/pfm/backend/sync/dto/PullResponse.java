@@ -8,7 +8,8 @@ import java.util.UUID;
 public record PullResponse(Changes changes, long nextCursor, boolean hasMore) {
         public record Changes(List<WalletRow> wallets, List<CategoryRow> categories,
                         List<GoalRow> savingGoals, List<TransactionRow> transactions,
-                        List<TransferRow> transfers, List<BudgetRow> monthlyBudgets) {
+                        List<TransferRow> transfers, List<BudgetRow> monthlyBudgets,
+                        List<ScheduledRow> scheduledTransactions) {
         }
 
         public record WalletRow(UUID id, UUID userId, String walletName, String walletType, long openingBalance,
@@ -37,5 +38,11 @@ public record PullResponse(Changes changes, long nextCursor, boolean hasMore) {
 
         public record BudgetRow(UUID id, UUID userId, UUID categoryId, String month, long spendingLimit,
                         String updatedAt, @JsonProperty("is_deleted") boolean isDeleted, long serverVersion) {
+        }
+
+        public record ScheduledRow(UUID id, UUID userId, UUID walletId, UUID categoryId, String type, long amount,
+                        String note, LocalDate startDate, String timeOfDay, String repeatUnit, Integer repeatEvery,
+                        LocalDate endDate, LocalDate nextDueDate, String updatedAt,
+                        @JsonProperty("is_deleted") boolean isDeleted, long serverVersion) {
         }
 }

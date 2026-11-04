@@ -18,6 +18,8 @@ import '../screens/pending/pending_inbox_screen.dart';
 import '../screens/saving_goals/saving_goal_detail_screen.dart';
 import '../screens/saving_goals/saving_goal_form_screen.dart';
 import '../screens/saving_goals/saving_goal_list_screen.dart';
+import '../screens/scheduled/scheduled_form_screen.dart';
+import '../screens/scheduled/scheduled_list_screen.dart';
 import '../screens/settings/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/splash_screen.dart';
@@ -29,10 +31,13 @@ import '../screens/wallets/wallet_detail_screen.dart';
 import '../screens/wallets/wallet_form_screen.dart';
 import '../screens/wallets/wallet_list_screen.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Central route table. Each path corresponds 1:1 with the future Spring
 /// Boot REST resource of the same name (see [AppRoutes] docs).
 GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     refreshListenable: Listenable.merge([authProvider, walletProvider]),
     redirect: (context, state) {
@@ -55,7 +60,7 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
       if (walletProvider.isLoaded &&
           walletProvider.wallets.isNotEmpty &&
           atRequired) {
-        return AppRoutes.home;
+        return AppRoutes.wallets;
       }
       if (loggingIn || atSplash) return AppRoutes.home;
       return null;
@@ -140,6 +145,17 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
       GoRoute(
           path: AppRoutes.pasteMessage,
           builder: (c, s) => const PasteMessageScreen()),
+      GoRoute(
+          path: AppRoutes.scheduled,
+          builder: (c, s) => const ScheduledListScreen()),
+      GoRoute(
+          path: AppRoutes.scheduledAdd,
+          builder: (c, s) => const ScheduledFormScreen()),
+      GoRoute(
+        path: AppRoutes.scheduledEdit,
+        builder: (c, s) =>
+            ScheduledFormScreen(scheduledId: s.pathParameters['id']),
+      ),
       GoRoute(
           path: AppRoutes.settings, builder: (c, s) => const SettingsScreen()),
       GoRoute(

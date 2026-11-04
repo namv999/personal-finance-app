@@ -1,23 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/network/api_endpoints.dart';
+import '../../core/utils/ledger_refresh.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../repositories/sync_pull_repository.dart';
 import '../../repositories/sync_service.dart';
-import '../../core/utils/ledger_refresh.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,8 +84,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.danger),
-            title: const Text('Đăng xuất',
-                style: TextStyle(color: AppColors.danger)),
+            title: const Text(
+              'Đăng xuất',
+              style: TextStyle(color: AppColors.danger),
+            ),
             onTap: () async {
               await context.read<AuthProvider>().logout();
             },

@@ -10,6 +10,7 @@ erDiagram
     USERS ||--o{ SAVING_GOALS : sets
     USERS ||--o{ TRANSFERS : makes
     USERS ||--o{ MONTHLY_BUDGETS : sets
+    USERS ||--o{ SCHEDULED_TRANSACTIONS : schedules
     USERS ||--|| PETS : has
     USERS ||--|| SAVING_STREAKS : has
     USERS ||--o{ AI_SUGGESTIONS : receives
@@ -17,11 +18,13 @@ erDiagram
     CATEGORIES ||--o{ PENDING_TRANSACTIONS : "suggested for"
 
     WALLETS ||--o{ TRANSACTIONS : contains
+    WALLETS ||--o{ SCHEDULED_TRANSACTIONS : schedules
     WALLETS ||--o{ TRANSFERS : "source of"
     WALLETS ||--o{ TRANSFERS : "destination of"
     WALLETS ||--o| SAVING_GOALS : "linked to"
 
     CATEGORIES ||--o{ TRANSACTIONS : classifies
+    CATEGORIES ||--o{ SCHEDULED_TRANSACTIONS : classifies
     CATEGORIES ||--o{ MONTHLY_BUDGETS : "limited by"
 
     SAVING_GOALS ||--o{ TRANSFERS : "funded by"
@@ -112,6 +115,25 @@ erDiagram
         bool is_deleted
     }
 
+    SCHEDULED_TRANSACTIONS {
+        string id PK
+        string user_id FK
+        string wallet_id FK
+        string category_id FK "nullable"
+        string type "INCOME hoặc EXPENSE"
+        int amount
+        string note
+        date start_date
+        string time_of_day "HH:mm, Asia/Ho_Chi_Minh"
+        string repeat_unit "DAY, WEEK, MONTH, YEAR hoặc NULL"
+        int repeat_every "nullable"
+        date end_date "nullable"
+        date next_due_date "NULL = đã hết kỳ"
+        datetime updated_at
+        bool is_deleted
+        int server_version
+    }
+
     PETS {
         string id PK
         string user_id FK "unique"
@@ -157,7 +179,6 @@ erDiagram
         string status "NEEDS_AI, PENDING, CONFIRMED hoặc REJECTED"
         datetime updated_at
     }
-}
 ```
 
 ## 2. Lược đồ quan hệ (Relational Schema Overview)
@@ -171,6 +192,7 @@ erDiagram
 | `saving_goals` | id | user_id, wallet_id (nullable) | Có | `saved_amount` là cache, không đồng bộ |
 | `transfers` | id | user_id, source_wallet_id, destination_wallet_id, goal_id (nullable) | Có | Chuyển nội bộ, KHÔNG tính vào thu/chi |
 | `monthly_budgets` | id | user_id, category_id | Có | Hợp nhất theo khóa tự nhiên (user_id, category_id, month) khi còn hiệu lực |
+| `scheduled_transactions` | id | user_id, wallet_id, category_id (nullable) | Có | Lịch giao dịch; `next_due_date` là kỳ chưa xử lý tiếp theo |
 | `pets` | id | user_id (unique) | Không | XP, level, shape suy ra từ dữ liệu. `pet_name` chỉ lưu local |
 | `saving_streaks` | id | user_id (unique) | Không | Suy ra từ transfers hợp lệ, mỗi máy tự tính lại |
 | `ai_suggestions` | id | user_id | Không | Cache local kết quả backend trả về. Unique (user_id, period_type, period_start) |
@@ -287,6 +309,29 @@ CREATE TABLE monthly_budgets (
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
+CREATE TABLE scheduled_transactions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    wallet_id TEXT NOT NULL,
+    category_id TEXT,
+    type TEXT NOT NULL CHECK (type IN ('INCOME','EXPENSE')),
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    note TEXT,
+    start_date TEXT NOT NULL,
+    time_of_day TEXT NOT NULL,              -- HH:mm, xác thực 00:00–23:59 ở ứng dụng/server
+    repeat_unit TEXT CHECK (repeat_unit IN ('DAY','WEEK','MONTH','YEAR')),
+    repeat_every INTEGER CHECK (repeat_every >= 1),
+    end_date TEXT,
+    next_due_date TEXT,
+    updated_at TEXT NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (wallet_id) REFERENCES wallets(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id),
+    CHECK ((repeat_unit IS NULL AND repeat_every IS NULL)
+        OR (repeat_unit IS NOT NULL AND repeat_every IS NOT NULL))
+);
+
 CREATE TABLE pets (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL UNIQUE,
@@ -358,6 +403,7 @@ CREATE TABLE sync_queue (
 CREATE UNIQUE INDEX ux_budget_active ON monthly_budgets(user_id, category_id, month) WHERE is_deleted = 0;
 CREATE INDEX ix_tx_wallet ON transactions(wallet_id, is_deleted);
 CREATE INDEX ix_tx_user_date ON transactions(user_id, transaction_date);
+CREATE INDEX ix_sched_due ON scheduled_transactions(user_id, is_deleted, next_due_date);
 CREATE INDEX ix_tf_src ON transfers(source_wallet_id, is_deleted);
 CREATE INDEX ix_tf_dst ON transfers(destination_wallet_id, is_deleted);
 CREATE INDEX ix_tf_goal ON transfers(goal_id, is_deleted);
@@ -380,7 +426,7 @@ CREATE UNIQUE INDEX ux_ai_period ON ai_suggestions(user_id, period_type, period_
 1. App luôn ghi SQLite local trước (chạy được khi offline). Mỗi lần ghi, đồng thời thêm một dòng vào `sync_queue` trong cùng transaction.
 2. Khi push, client gộp `sync_queue` thành các bản ghi bẩn (theo bảng + id) và đọc **trạng thái hiện tại** của từng bản ghi (gồm `is_deleted`) để gửi lên, không phát lại từng thao tác. Chỉ gửi bản ghi thuộc user hiện tại.
 3. Thứ tự bảng khi push và pull: wallets → categories → saving_goals → transactions và transfers → monthly_budgets (bảng cha trước bảng con).
-4. `POST /sync/push`: server xử lý độc lập từng bản ghi và trả kết quả riêng: `APPLIED`, `SKIPPED_NEWER` (server đang có bản mới hơn, LWW theo `updated_at`), hoặc `REJECTED` kèm lý do. Client chỉ đánh dấu `is_synced = 1` cho `APPLIED` và `SKIPPED_NEWER`, các dòng đã đồng bộ sẽ được dọn khỏi queue.
+4. `POST /sync/push`: server xử lý độc lập từng bản ghi và trả kết quả riêng: `APPLIED`, `SKIPPED_NEWER` (server đang có bản mới hơn, LWW theo `updated_at`), hoặc `REJECTED` kèm lý do. Client chỉ đánh dấu `is_synced = 1` cho `APPLIED` và `SKIPPED_NEWER`, các dòng đã đồng bộ sẽ được dọn khỏi queue. `scheduled_transactions` được push/pull; `pending_transactions` tiếp tục chỉ tồn tại local.
 5. Mỗi lần server ghi bản ghi, nó gán `server_version` (số nguyên tăng dần). Con trỏ pull dùng `server_version`, không dùng `updated_at` của client, để thiết bị offline đẩy dữ liệu muộn không làm các thiết bị khác bỏ sót thay đổi.
 6. `GET /sync/pull?cursor=<int64>`: client gộp mọi trang, áp dụng toàn bộ trong một transaction (LWW theo `updated_at`, `monthly_budgets` hợp nhất theo khóa tự nhiên), rồi mới lưu cursor theo từng user.
 7. Sau pull, client tính lại `current_balance`, `saved_amount`, streak và XP của pet, vì đây là các giá trị suy ra.

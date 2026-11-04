@@ -28,12 +28,16 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> load() async {
     isLoading = true;
+    isLoaded = false;
     notifyListeners();
-    wallets = await _repo.getAll(userId);
-    totalBalance = await _repo.getTotalBalance(userId);
-    isLoading = false;
-    isLoaded = true;
-    notifyListeners();
+    try {
+      wallets = await _repo.getAll(userId);
+      totalBalance = await _repo.getTotalBalance(userId);
+      isLoaded = true;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addWallet({

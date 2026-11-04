@@ -19,6 +19,8 @@ class MoreMenuScreen extends StatelessWidget {
           AppRoutes.categories),
       _MenuItem(Icons.pie_chart_outline, 'Ngân sách',
           'Hạn mức chi tiêu theo tháng', AppRoutes.budgets),
+      _MenuItem(Icons.event_repeat, 'Giao dịch hẹn trước',
+          'Lên lịch thu chi sắp tới', AppRoutes.scheduled),
       _MenuItem(
           Icons.pets, 'Thú cưng', 'Chăm sóc thú cưng tiết kiệm', AppRoutes.pet),
       _MenuItem(Icons.auto_awesome_outlined, 'Gợi ý AI',

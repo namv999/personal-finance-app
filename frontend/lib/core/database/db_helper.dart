@@ -18,6 +18,7 @@ class Tables {
   static const aiSuggestions = 'ai_suggestions';
   static const syncQueue = 'sync_queue';
   static const pendingTransactions = 'pending_transactions';
+  static const scheduledTransactions = 'scheduled_transactions';
 }
 
 const _systemCategoryIds = {
@@ -45,6 +46,22 @@ CREATE TABLE ${Tables.pendingTransactions} (
   FOREIGN KEY (suggested_category_id) REFERENCES ${Tables.categories}(id)
 )''';
 
+const _ddlScheduledTransactions = '''
+CREATE TABLE ${Tables.scheduledTransactions} (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL, wallet_id TEXT NOT NULL, category_id TEXT,
+  type TEXT NOT NULL CHECK (type IN ('INCOME','EXPENSE')),
+  amount INTEGER NOT NULL CHECK (amount > 0), note TEXT,
+  start_date TEXT NOT NULL, time_of_day TEXT NOT NULL,
+  repeat_unit TEXT CHECK (repeat_unit IN ('DAY','WEEK','MONTH','YEAR')),
+  repeat_every INTEGER CHECK (repeat_every >= 1),
+  end_date TEXT, next_due_date TEXT,
+  updated_at TEXT, is_deleted INTEGER DEFAULT 0,
+  CHECK ((repeat_unit IS NULL) = (repeat_every IS NULL)),
+  FOREIGN KEY (user_id) REFERENCES ${Tables.users}(id),
+  FOREIGN KEY (wallet_id) REFERENCES ${Tables.wallets}(id),
+  FOREIGN KEY (category_id) REFERENCES ${Tables.categories}(id)
+)''';
+
 /// Singleton SQLite handle. Schema is a direct translation of the SQL in
 /// `DB_Flutter_Idea.md` (§3), including the local-only `sync_queue` table.
 class DbHelper {
@@ -63,7 +80,7 @@ class DbHelper {
     final path = join(dbPath, 'personal_finance.db');
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
@@ -122,9 +139,11 @@ class DbHelper {
       ''', [nowUtcIso()]);
     }
     if (oldVersion < 4) {
-      await db.execute("ALTER TABLE ${Tables.transactions} ADD COLUMN source TEXT NOT NULL DEFAULT 'MANUAL' CHECK (source IN ('MANUAL','SMS','IMAGE','TEXT'))");
+      await db.execute(
+          "ALTER TABLE ${Tables.transactions} ADD COLUMN source TEXT NOT NULL DEFAULT 'MANUAL' CHECK (source IN ('MANUAL','SMS','IMAGE','TEXT'))");
       await db.execute(_ddlPendingTransactions);
-      await db.execute('UPDATE OR IGNORE ${Tables.users} SET email = lower(trim(email)) WHERE email IS NOT NULL');
+      await db.execute(
+          'UPDATE OR IGNORE ${Tables.users} SET email = lower(trim(email)) WHERE email IS NOT NULL');
     }
     if (oldVersion < 5) {
       await db.execute('DROP TABLE IF EXISTS ${Tables.aiSuggestions}');
@@ -143,6 +162,9 @@ class DbHelper {
         )
       ''');
     }
+    if (oldVersion < 6) {
+      await db.execute(_ddlScheduledTransactions);
+    }
     await _createIndexes(db);
   }
 
@@ -160,7 +182,10 @@ class DbHelper {
         'CREATE INDEX IF NOT EXISTS ix_tf_dst ON ${Tables.transfers}(destination_wallet_id, is_deleted)');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS ix_tf_goal ON ${Tables.transfers}(goal_id, is_deleted)');
-    await db.execute('CREATE INDEX IF NOT EXISTS ix_pending_user_status ON ${Tables.pendingTransactions}(user_id, status)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS ix_pending_user_status ON ${Tables.pendingTransactions}(user_id, status)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS ix_sched_due ON ${Tables.scheduledTransactions}(user_id, is_deleted, next_due_date)');
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -332,6 +357,7 @@ class DbHelper {
     ''');
 
     batch.execute(_ddlPendingTransactions);
+    batch.execute(_ddlScheduledTransactions);
 
     await batch.commit(noResult: true);
     await _createIndexes(db);
@@ -394,8 +420,7 @@ class DbHelper {
     final batch = db.batch();
     for (final c in defaults) {
       batch.insert(Tables.categories, {
-        'id':
-            _systemCategoryIds[c['name']],
+        'id': _systemCategoryIds[c['name']],
         'user_id': null,
         'category_name': c['name'],
         'type': c['type'],

@@ -15,6 +15,7 @@ const syncTableOrder = [
   Tables.transactions,
   Tables.transfers,
   Tables.monthlyBudgets,
+  Tables.scheduledTransactions,
 ];
 
 const syncColumns = <String, List<String>>{
@@ -81,6 +82,23 @@ const syncColumns = <String, List<String>>{
     'category_id',
     'month',
     'spending_limit',
+    'updated_at',
+    'is_deleted'
+  ],
+  Tables.scheduledTransactions: [
+    'id',
+    'user_id',
+    'wallet_id',
+    'category_id',
+    'type',
+    'amount',
+    'note',
+    'start_date',
+    'time_of_day',
+    'repeat_unit',
+    'repeat_every',
+    'end_date',
+    'next_due_date',
     'updated_at',
     'is_deleted'
   ],

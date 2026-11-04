@@ -8,6 +8,7 @@ import '../core/constants/app_routes.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/ledger_refresh.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/scheduled_provider.dart';
 import '../repositories/wallet_repository.dart';
 
 /// Opens the cascade delete preview dialog and coordinates deletion,
@@ -18,6 +19,7 @@ Future<void> confirmAndDeleteWallet(
   required String walletName,
 }) async {
   final walletProvider = context.read<WalletProvider>();
+  final scheduled = context.read<ScheduledProvider>();
   final nav = Navigator.of(context, rootNavigator: true);
   final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.of(context);
@@ -64,6 +66,7 @@ Future<void> confirmAndDeleteWallet(
   try {
     await walletProvider.deleteWallet(walletId);
     await refresh.run();
+    await scheduled.load().catchError((_) {});
     deleted = true;
   } catch (e) {
     showError(e);
@@ -126,7 +129,8 @@ class _WalletDeleteDialogState extends State<WalletDeleteDialog> {
       widget.preview.transferCount > 0 ||
       widget.preview.counterparts.isNotEmpty ||
       widget.preview.deletedGoals.isNotEmpty ||
-      widget.preview.affectedGoals.isNotEmpty;
+      widget.preview.affectedGoals.isNotEmpty ||
+      widget.preview.scheduledCount > 0;
 
   @override
   void initState() {
@@ -272,6 +276,22 @@ class _WalletDeleteDialogState extends State<WalletDeleteDialog> {
                             Expanded(
                               child: Text(
                                 '${preview.transferCount} lượt chuyển tiền sẽ bị xóa.',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                      ],
+                      if (preview.scheduledCount > 0) ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('• ',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: Text(
+                                '${preview.scheduledCount} giao dịch hẹn trước sẽ bị xóa, thông báo nhắc cũng bị hủy.',
                                 style: const TextStyle(fontSize: 13),
                               ),
                             ),

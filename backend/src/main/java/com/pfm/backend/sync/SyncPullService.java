@@ -30,15 +30,18 @@ public class SyncPullService {
     private final TransactionRepository transactions;
     private final TransferRepository transfers;
     private final MonthlyBudgetRepository budgets;
+    private final ScheduledTransactionRepository scheduled;
 
     public SyncPullService(WalletRepository wallets, CategoryRepository categories, SavingGoalRepository goals,
-            TransactionRepository transactions, TransferRepository transfers, MonthlyBudgetRepository budgets) {
+            TransactionRepository transactions, TransferRepository transfers, MonthlyBudgetRepository budgets,
+            ScheduledTransactionRepository scheduled) {
         this.wallets = wallets;
         this.categories = categories;
         this.goals = goals;
         this.transactions = transactions;
         this.transfers = transfers;
         this.budgets = budgets;
+        this.scheduled = scheduled;
     }
 
     @Transactional(readOnly = true)
@@ -55,6 +58,7 @@ public class SyncPullService {
         var t = transactions.findByUserIdAndServerVersionGreaterThanOrderByServerVersionAsc(uid, cursor, page);
         var f = transfers.findByUserIdAndServerVersionGreaterThanOrderByServerVersionAsc(uid, cursor, page);
         var b = budgets.findByUserIdAndServerVersionGreaterThanOrderByServerVersionAsc(uid, cursor, page);
+        var s = scheduled.findByUserIdAndServerVersionGreaterThanOrderByServerVersionAsc(uid, cursor, page);
 
         List<Long> all = new ArrayList<>();
         versions(all, w);
@@ -63,6 +67,7 @@ public class SyncPullService {
         versions(all, t);
         versions(all, f);
         versions(all, b);
+        versions(all, s);
         Collections.sort(all);
         boolean hasMore = all.size() > limit;
         long cutoff = all.isEmpty() ? cursor : all.get(Math.min(limit, all.size()) - 1);
@@ -70,7 +75,8 @@ public class SyncPullService {
         var changes = new PullResponse.Changes(
                 cut(w, cutoff, SyncPullService::walletRow), cut(c, cutoff, SyncPullService::categoryRow),
                 cut(g, cutoff, SyncPullService::goalRow), cut(t, cutoff, SyncPullService::transactionRow),
-                cut(f, cutoff, SyncPullService::transferRow), cut(b, cutoff, SyncPullService::budgetRow));
+                cut(f, cutoff, SyncPullService::transferRow), cut(b, cutoff, SyncPullService::budgetRow),
+                cut(s, cutoff, SyncPullService::scheduledRow));
         return new PullResponse(changes, cutoff, hasMore);
     }
 
@@ -120,5 +126,12 @@ public class SyncPullService {
     private static PullResponse.BudgetRow budgetRow(MonthlyBudget e) {
         return new PullResponse.BudgetRow(e.getId(), e.getUserId(), e.getCategoryId(), e.getMonth(),
                 e.getSpendingLimit(), ts(e.getUpdatedAt()), e.isDeleted(), e.getServerVersion());
+    }
+
+    private static PullResponse.ScheduledRow scheduledRow(ScheduledTransaction e) {
+        return new PullResponse.ScheduledRow(e.getId(), e.getUserId(), e.getWalletId(), e.getCategoryId(),
+                e.getType(), e.getAmount(), e.getNote(), e.getStartDate(), e.getTimeOfDay(), e.getRepeatUnit(),
+                e.getRepeatEvery(), e.getEndDate(), e.getNextDueDate(), ts(e.getUpdatedAt()), e.isDeleted(),
+                e.getServerVersion());
     }
 }

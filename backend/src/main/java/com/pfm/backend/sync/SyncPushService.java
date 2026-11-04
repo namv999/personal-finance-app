@@ -18,7 +18,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class SyncPushService {
     private static final ZoneId VN = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final Pattern MONTH = Pattern.compile("^\\d{4}-(0[1-9]|1[0-2])$");
+    private static final Pattern TIME = Pattern.compile("^([01]\\d|2[0-3]):[0-5]\\d$");
     private static final Set<String> TYPES = Set.of("INCOME", "EXPENSE");
+    private static final Set<String> UNITS = Set.of("DAY", "WEEK", "MONTH", "YEAR");
     private static final Set<String> SOURCES = Set.of("MANUAL", "SMS", "IMAGE", "TEXT");
     private static final int MAX_RECORDS = 500;
     private final TransactionTemplate tx;
@@ -29,10 +31,12 @@ public class SyncPushService {
     private final TransactionRepository transactions;
     private final TransferRepository transfers;
     private final MonthlyBudgetRepository budgets;
+    private final ScheduledTransactionRepository scheduled;
 
     public SyncPushService(TransactionTemplate tx, ServerVersionService versions, WalletRepository wallets,
             CategoryRepository categories, SavingGoalRepository goals, TransactionRepository transactions,
-            TransferRepository transfers, MonthlyBudgetRepository budgets) {
+            TransferRepository transfers, MonthlyBudgetRepository budgets,
+            ScheduledTransactionRepository scheduled) {
         this.tx = tx;
         this.versions = versions;
         this.wallets = wallets;
@@ -41,6 +45,7 @@ public class SyncPushService {
         this.transactions = transactions;
         this.transfers = transfers;
         this.budgets = budgets;
+        this.scheduled = scheduled;
     }
 
     private record Outcome(PushStatus status, RejectReason reason, String message) {
@@ -66,7 +71,7 @@ public class SyncPushService {
         if (r == null)
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Thiếu records");
         int total = size(r.wallets()) + size(r.categories()) + size(r.savingGoals()) + size(r.transactions())
-                + size(r.transfers()) + size(r.monthlyBudgets());
+                + size(r.transfers()) + size(r.monthlyBudgets()) + size(r.scheduledTransactions());
         if (total > MAX_RECORDS)
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Tối đa 500 bản ghi mỗi request");
         List<PushResult> out = new ArrayList<>();
@@ -76,6 +81,7 @@ public class SyncPushService {
         each(out, "transactions", r.transactions(), d -> pushTransaction(uid, d));
         each(out, "transfers", r.transfers(), d -> pushTransfer(uid, d));
         each(out, "monthly_budgets", r.monthlyBudgets(), d -> pushBudget(uid, d));
+        each(out, "scheduled_transactions", r.scheduledTransactions(), d -> pushScheduled(uid, d));
         return new PushResponse(out);
     }
 
@@ -341,6 +347,59 @@ public class SyncPushService {
         b.setSpendingLimit(d.spendingLimit());
         stamp(b, at, d.isDeleted() || loser);
         budgets.save(b);
+        return Outcome.applied();
+    }
+
+    private Outcome pushScheduled(UUID uid, ScheduledTransactionDto d) {
+        Instant at = clamp(d.updatedAt());
+        ScheduledTransaction s = scheduled.findById(d.id()).orElse(null);
+        Outcome stop = gate(uid, d, s, at);
+        if (stop != null)
+            return stop;
+        if (d.type() == null || !TYPES.contains(d.type()) || d.amount() == null || d.amount() <= 0)
+            return Outcome.invalid("type hoặc amount không hợp lệ");
+        if (d.startDate() == null || d.timeOfDay() == null || !TIME.matcher(d.timeOfDay()).matches())
+            return Outcome.invalid("start_date hoặc time_of_day không hợp lệ");
+        boolean repeating = d.repeatUnit() != null;
+        if (repeating != (d.repeatEvery() != null))
+            return Outcome.invalid("repeat_unit và repeat_every phải đi cùng nhau");
+        if (repeating && (!UNITS.contains(d.repeatUnit()) || d.repeatEvery() < 1 || d.repeatEvery() > 365))
+            return Outcome.invalid("repeat_unit hoặc repeat_every không hợp lệ");
+        if (!repeating && d.endDate() != null)
+            return Outcome.invalid("Giao dịch một lần không có end_date");
+        if (d.endDate() != null && d.endDate().isBefore(d.startDate()))
+            return Outcome.invalid("end_date trước start_date");
+        if (d.nextDueDate() != null && (d.nextDueDate().isBefore(d.startDate())
+                || (d.endDate() != null && d.nextDueDate().isAfter(d.endDate()))))
+            return Outcome.invalid("next_due_date không hợp lệ");
+        // Không chặn start_date quá khứ: kỳ đã đến hạn vẫn phải đồng bộ được.
+        Outcome p = checkWallet(uid, d.walletId(), d.isDeleted());
+        if (p != null)
+            return p;
+        if (d.categoryId() != null) {
+            // Cho phép đồng bộ lịch đã lưu dù danh mục sau đó bị xóa.
+            p = checkCategory(uid, d.categoryId(), true);
+            if (p != null)
+                return p;
+        }
+        if (s == null) {
+            s = new ScheduledTransaction();
+            s.setId(d.id());
+            s.setUserId(uid);
+        }
+        s.setWalletId(d.walletId());
+        s.setCategoryId(d.categoryId());
+        s.setType(d.type());
+        s.setAmount(d.amount());
+        s.setNote(d.note());
+        s.setStartDate(d.startDate());
+        s.setTimeOfDay(d.timeOfDay());
+        s.setRepeatUnit(d.repeatUnit());
+        s.setRepeatEvery(d.repeatEvery());
+        s.setEndDate(d.endDate());
+        s.setNextDueDate(d.nextDueDate());
+        stamp(s, at, d.isDeleted());
+        scheduled.save(s);
         return Outcome.applied();
     }
 }

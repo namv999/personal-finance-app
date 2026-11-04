@@ -269,6 +269,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('Dán tin nhắn'), 100);
+      await tester.pumpAndSettle();
+
       expect(find.text('Hộp thư chờ duyệt'), findsOneWidget);
       expect(find.text('Dán tin nhắn'), findsOneWidget);
       expect(find.byType(Badge), findsOneWidget);

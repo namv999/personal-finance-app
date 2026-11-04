@@ -141,4 +141,29 @@ void main() {
       isNotNull,
     );
   });
+
+  testWidgets('scheduled transactions alone show warning and countdown',
+      (tester) async {
+    const preview = WalletDeletePreview(
+      transactionCount: 0,
+      incomeTotal: 0,
+      expenseTotal: 0,
+      transferCount: 0,
+      counterparts: [],
+      deletedGoals: [],
+      affectedGoals: [],
+      scheduledCount: 2,
+    );
+
+    await tester.pumpWidget(
+        buildTestDialog(walletName: 'Ví có lịch', preview: preview));
+    await tester.tap(find.text('Open'));
+    await tester.pump();
+
+    expect(
+      find.text('2 giao dịch hẹn trước sẽ bị xóa, thông báo nhắc cũng bị hủy.'),
+      findsOneWidget,
+    );
+    expect(find.text('Đồng ý xóa (6)'), findsOneWidget);
+  });
 }

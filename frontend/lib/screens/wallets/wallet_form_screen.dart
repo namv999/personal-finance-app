@@ -34,6 +34,17 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
 
   bool get isEditing => widget.walletId != null;
 
+  int get _enteredBalance =>
+      int.parse(_balanceController.text.replaceAll(',', ''));
+
+  String? _validateBalance(String? value) {
+    if (!isEditing) return Validators.positiveAmount(value);
+    if (value == null || value.trim().isEmpty) return 'Vui lòng nhập số tiền';
+    final amount = int.tryParse(value.replaceAll(',', ''));
+    if (amount == null || amount < 0) return 'Nhập số nguyên không âm';
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +78,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
 
   Future<void> _submit() async {
     if (_saving || !_formKey.currentState!.validate()) return;
+    if (isEditing && _editing == null) return;
     setState(() => _saving = true);
     final provider = context.read<WalletProvider>();
     try {
@@ -75,6 +87,10 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
         final updated = _editing!.copyWith(
           walletName: _nameController.text.trim(),
           walletType: _walletType,
+          currentBalance: _enteredBalance,
+          openingBalance: _editing!.openingBalance +
+              _enteredBalance -
+              _editing!.currentBalance,
           icon: _icon,
           color: _color,
         );
@@ -84,15 +100,14 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
         await provider.addWallet(
           name: _nameController.text.trim(),
           type: _walletType,
-          initialBalance:
-              int.parse(_balanceController.text.replaceAll(',', '')),
+          initialBalance: _enteredBalance,
           icon: _icon,
           color: _color,
         );
       }
       if (mounted) {
-        if (widget.isRequired) {
-          context.go(AppRoutes.home);
+        if (!isEditing) {
+          context.go(AppRoutes.wallets);
         } else {
           context.pop();
         }
@@ -179,13 +194,12 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
                 onChanged: (v) => setState(() => _walletType = v!),
               ),
               const SizedBox(height: 14),
-              if (!isEditing)
-                AppTextField(
-                  label: 'Số dư ban đầu',
-                  controller: _balanceController,
-                  keyboardType: TextInputType.number,
-                  validator: Validators.positiveAmount,
-                ),
+              AppTextField(
+                label: isEditing ? 'Số dư hiện tại' : 'Số dư ban đầu',
+                controller: _balanceController,
+                keyboardType: TextInputType.number,
+                validator: _validateBalance,
+              ),
               const SizedBox(height: 20),
               IconColorPicker(
                 selectedIcon: _icon,
@@ -195,7 +209,9 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                  onPressed: _saving ? null : _submit,
+                  onPressed: _saving || (isEditing && _editing == null)
+                      ? null
+                      : _submit,
                   child: Text(widget.isRequired
                       ? 'Tạo ví & Bắt đầu'
                       : (isEditing ? 'Lưu thay đổi' : 'Tạo ví'))),
