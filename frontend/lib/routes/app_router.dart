@@ -17,19 +17,16 @@ import '../screens/pending/paste_message_screen.dart';
 import '../screens/pending/pending_inbox_screen.dart';
 import '../screens/saving_goals/saving_goal_detail_screen.dart';
 import '../screens/saving_goals/saving_goal_form_screen.dart';
-import '../screens/saving_goals/saving_goal_list_screen.dart';
 import '../screens/scheduled/scheduled_form_screen.dart';
 import '../screens/scheduled/scheduled_list_screen.dart';
 import '../screens/settings/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/transactions/transaction_form_screen.dart';
-import '../screens/transactions/transaction_list_screen.dart';
 import '../screens/transfers/transfer_form_screen.dart';
 import '../screens/transfers/transfer_list_screen.dart';
 import '../screens/wallets/wallet_detail_screen.dart';
 import '../screens/wallets/wallet_form_screen.dart';
-import '../screens/wallets/wallet_list_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -70,9 +67,20 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
       GoRoute(path: AppRoutes.login, builder: (c, s) => const LoginScreen()),
       GoRoute(
           path: AppRoutes.register, builder: (c, s) => const RegisterScreen()),
-      GoRoute(path: AppRoutes.home, builder: (c, s) => const HomeShell()),
       GoRoute(
-          path: AppRoutes.wallets, builder: (c, s) => const WalletListScreen()),
+        path: AppRoutes.home,
+        builder: (c, s) {
+          final tabStr = s.uri.queryParameters['tab'];
+          final tab = tabStr != null ? int.tryParse(tabStr) ?? 0 : 0;
+          return HomeShell(
+              key: const ValueKey('home_shell'), initialIndex: tab);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.wallets,
+        builder: (c, s) =>
+            const HomeShell(key: ValueKey('home_shell'), initialIndex: 2),
+      ),
       GoRoute(
           path: AppRoutes.walletAdd,
           builder: (c, s) => const WalletFormScreen()),
@@ -101,8 +109,10 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
             CategoryFormScreen(categoryId: s.pathParameters['id']),
       ),
       GoRoute(
-          path: AppRoutes.transactions,
-          builder: (c, s) => const TransactionListScreen()),
+        path: AppRoutes.transactions,
+        builder: (c, s) =>
+            const HomeShell(key: ValueKey('home_shell'), initialIndex: 1),
+      ),
       GoRoute(
           path: AppRoutes.transactionAdd,
           builder: (c, s) => const TransactionFormScreen()),
@@ -120,8 +130,10 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
             TransferFormScreen(goalId: s.uri.queryParameters['goalId']),
       ),
       GoRoute(
-          path: AppRoutes.savingGoals,
-          builder: (c, s) => const SavingGoalListScreen()),
+        path: AppRoutes.savingGoals,
+        builder: (c, s) =>
+            const HomeShell(key: ValueKey('home_shell'), initialIndex: 3),
+      ),
       GoRoute(
           path: AppRoutes.savingGoalAdd,
           builder: (c, s) => const SavingGoalFormScreen()),

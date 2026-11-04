@@ -10,6 +10,7 @@ import '../core/utils/ledger_refresh.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/scheduled_provider.dart';
 import '../repositories/wallet_repository.dart';
+import '../routes/app_router.dart';
 
 /// Opens the cascade delete preview dialog and coordinates deletion,
 /// reloading affected providers, and navigating based on remaining wallets.
@@ -20,10 +21,12 @@ Future<void> confirmAndDeleteWallet(
 }) async {
   final walletProvider = context.read<WalletProvider>();
   final scheduled = context.read<ScheduledProvider>();
-  final nav = Navigator.of(context, rootNavigator: true);
-  final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  final refresh = LedgerRefresh.all(context);
+  // Use afterWalletWrite to avoid a redundant walletProvider.load() — deleteWallet
+  // already calls load() internally, which triggers GoRouter's redirect.
+  // A double load creates a concurrent notifyListeners() race that can produce
+  // a black screen when no wallets remain after deletion.
+  final refresh = LedgerRefresh.afterWalletWrite(context);
 
   void showError(Object error) {
     if (!messenger.mounted) return;
@@ -33,21 +36,14 @@ Future<void> confirmAndDeleteWallet(
     ));
   }
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const _LoadingDialog('Đang kiểm tra dữ liệu liên quan...'),
-  );
-
   WalletDeletePreview? preview;
   try {
     preview = await walletProvider.previewDelete(walletId);
   } catch (e) {
     showError(e);
-  } finally {
-    nav.pop();
+    return;
   }
-  if (preview == null || !context.mounted) return;
+  if (!context.mounted) return;
 
   final confirmed = await showDialog<bool>(
     context: context,
@@ -55,12 +51,6 @@ Future<void> confirmAndDeleteWallet(
         WalletDeleteDialog(walletName: walletName, preview: preview!),
   );
   if (confirmed != true || !context.mounted) return;
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const _LoadingDialog('Đang xóa ví và cập nhật dữ liệu...'),
-  );
 
   var deleted = false;
   try {
@@ -70,40 +60,30 @@ Future<void> confirmAndDeleteWallet(
     deleted = true;
   } catch (e) {
     showError(e);
-  } finally {
-    nav.pop();
   }
 
   if (!deleted) return;
-  router.go(walletProvider.wallets.isEmpty
-      ? AppRoutes.walletCreateRequired
-      : AppRoutes.wallets);
-}
 
-class _LoadingDialog extends StatelessWidget {
-  final String message;
-  const _LoadingDialog(this.message);
-
-  @override
-  Widget build(BuildContext context) => PopScope(
-        canPop: false,
-        child: Center(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(message,
-                      style: const TextStyle(fontWeight: FontWeight.w500)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
+  // If wallets are empty, GoRouter's redirect (triggered by walletProvider
+  // notifyListeners inside deleteWallet → load()) will automatically
+  // navigate to walletCreateRequired. We must NOT call .go() ourselves here,
+  // because GoRouter may already be mid-transition and a double .go() causes
+  // the navigator stack to be corrupted (black screen).
+  //
+  // If wallets are still non-empty, we explicitly navigate to the wallet list
+  // using addPostFrameCallback so the call runs after the current frame,
+  // avoiding any conflict with an in-progress GoRouter redirect cycle.
+  if (walletProvider.wallets.isNotEmpty) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final rootCtx = rootNavigatorKey.currentContext;
+      if (rootCtx != null && rootCtx.mounted) {
+        GoRouter.of(rootCtx).go(AppRoutes.wallets);
+      } else if (context.mounted) {
+        GoRouter.of(context).go(AppRoutes.wallets);
+      }
+    });
+  }
+  // wallets.isEmpty → GoRouter redirect handles navigation automatically.
 }
 
 class WalletDeleteDialog extends StatefulWidget {

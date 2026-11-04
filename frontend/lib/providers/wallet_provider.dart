@@ -28,7 +28,6 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> load() async {
     isLoading = true;
-    isLoaded = false;
     notifyListeners();
     try {
       wallets = await _repo.getAll(userId);
@@ -48,7 +47,12 @@ class WalletProvider extends ChangeNotifier {
     String? icon,
   }) async {
     await _repo.create(
-        userId: userId, walletName: name, walletType: type, initialBalance: initialBalance, color: color, icon: icon);
+        userId: userId,
+        walletName: name,
+        walletType: type,
+        initialBalance: initialBalance,
+        color: color,
+        icon: icon);
     await load();
   }
 

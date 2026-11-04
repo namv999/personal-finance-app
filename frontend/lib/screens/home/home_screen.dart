@@ -94,7 +94,7 @@ class _BalanceCard extends StatelessWidget {
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white54),
                 ),
-                onPressed: () => context.push(AppRoutes.wallets),
+                onPressed: () => context.go(AppRoutes.wallets),
                 icon: const Icon(Icons.account_balance_wallet, size: 18),
                 label: const Text('Ví của tôi'),
               ),
@@ -344,7 +344,7 @@ class _RecentTransactionsCard extends StatelessWidget {
                 const Text('Giao dịch gần đây',
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 TextButton(
-                    onPressed: () => context.push(AppRoutes.transactions),
+                    onPressed: () => context.go(AppRoutes.transactions),
                     child: const Text('Xem tất cả')),
               ],
             ),

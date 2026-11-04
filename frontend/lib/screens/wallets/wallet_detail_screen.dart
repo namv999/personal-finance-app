@@ -49,6 +49,9 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
         .firstOrNull;
 
     if (wallet == null) {
+      if (walletProvider.wallets.isEmpty) {
+        return const Scaffold(body: LoadingView());
+      }
       return Scaffold(
         appBar: AppBar(title: const Text('Ví không còn tồn tại')),
         body: EmptyState(

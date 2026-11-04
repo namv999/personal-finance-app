@@ -31,6 +31,22 @@ class LedgerRefresh {
         context.read<TransferProvider>().load,
       ]);
 
+  /// Reload all ledger providers EXCEPT WalletProvider.
+  ///
+  /// Use after [WalletProvider.deleteWallet] / [WalletProvider.addWallet] /
+  /// [WalletProvider.editWallet], which already call [WalletProvider.load]
+  /// internally. A second concurrent wallet load causes a redundant
+  /// notifyListeners() that can interfere with GoRouter's redirect cycle
+  /// and produce a black screen when all wallets are deleted.
+  factory LedgerRefresh.afterWalletWrite(BuildContext context) =>
+      LedgerRefresh._([
+        context.read<SavingGoalProvider>().load,
+        context.read<BudgetProvider>().load,
+        context.read<PetStreakProvider>().load,
+        context.read<TransactionProvider>().load,
+        context.read<TransferProvider>().load,
+      ]);
+
   /// A refresh failure must not report a successful DB write as failed.
   Future<void> run() async {
     await Future.wait(_loaders.map((load) async {
