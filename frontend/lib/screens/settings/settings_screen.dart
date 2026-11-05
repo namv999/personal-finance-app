@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
-import '../../core/utils/ledger_refresh.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/category_provider.dart';
+import '../../repositories/auto_sync_service.dart';
 import '../../repositories/sync_pull_repository.dart';
-import '../../repositories/sync_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -27,10 +27,18 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => context.push(AppRoutes.profile),
           ),
           const Divider(height: 1),
+          Builder(builder: (context) {
+            final service = context.watch<AutoSyncService>();
+            return ListTile(
+              leading: const Icon(Icons.cloud_sync_outlined),
+              title: const Text('Trạng thái đồng bộ'),
+              subtitle: Text(_syncStatus(service)),
+            );
+          }),
           const ListTile(
-            leading: Icon(Icons.cloud_sync_outlined),
-            title: Text('Trạng thái đồng bộ'),
-            subtitle: Text('Backend: ${ApiEndpoints.baseUrl}'),
+            leading: Icon(Icons.cloud_outlined),
+            title: Text('Máy chủ'),
+            subtitle: Text(ApiEndpoints.baseUrl),
           ),
           ListTile(
             leading: const Icon(Icons.sync),
@@ -38,23 +46,20 @@ class SettingsScreen extends StatelessWidget {
             onTap: () async {
               final userId = context.read<AuthProvider>().currentUser?.id;
               if (userId == null) return;
-              final out = await context.read<SyncService>().syncAll(userId);
+              final service = context.read<AutoSyncService>();
+              final out = await service.syncNow();
               if (!context.mounted) return;
-              if (out.ok) {
-                await context.read<CategoryProvider>().load();
-                if (!context.mounted) return;
-                await LedgerRefresh.all(context).run();
-                if (!context.mounted) return;
-              }
               final p = out.push;
-              final message = out.error == 'NO_TOKEN'
-                  ? 'Cần đăng nhập online để đồng bộ'
-                  : out.unauthorized
-                      ? 'Phiên hết hạn, cần đăng nhập lại để đồng bộ'
-                      : out.error != null
-                          ? 'Lỗi đồng bộ: ${out.error}'
-                          : 'Push: ${p?.applied} ok, ${p?.skippedNewer} bỏ qua, '
-                              '${p?.rejected.length} từ chối. Pull: ${out.pull?.received} bản ghi';
+              final message = out.error == 'BUSY'
+                  ? 'Đang đồng bộ, vui lòng đợi'
+                  : out.error == 'NO_TOKEN'
+                      ? 'Cần đăng nhập online để đồng bộ'
+                      : service.needsRelogin || out.unauthorized
+                          ? 'Phiên hết hạn, cần đăng nhập lại để đồng bộ'
+                          : out.error != null
+                              ? 'Lỗi đồng bộ: ${out.error}'
+                              : 'Push: ${p?.applied} ok, ${p?.skippedNewer} bỏ qua, '
+                                  '${p?.rejected.length} từ chối. Pull: ${out.pull?.received} bản ghi';
               debugPrint(message);
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
@@ -95,5 +100,16 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _syncStatus(AutoSyncService service) {
+    if (service.isRunning) return 'Đang đồng bộ...';
+    if (service.needsRelogin) return 'Phiên hết hạn, cần đăng nhập lại';
+    if (!ApiClient.instance.hasToken) return 'Chưa đăng nhập online';
+    if (service.lastError != null) return 'Lỗi, sẽ tự thử lại';
+    final time = service.lastSyncAt;
+    return time == null
+        ? 'Chưa đồng bộ trong phiên này'
+        : 'Lần cuối: ${DateFormat('HH:mm dd/MM').format(time.toLocal())}';
   }
 }

@@ -2,9 +2,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:personal_finance_app/core/constants/app_colors.dart';
+import 'package:personal_finance_app/core/constants/app_routes.dart';
 import 'package:personal_finance_app/models/category.dart';
 import 'package:personal_finance_app/models/pending_transaction.dart';
 import 'package:personal_finance_app/models/user.dart';
@@ -31,6 +33,7 @@ class FakePendingProvider extends ChangeNotifier implements PendingProvider {
   List<PendingTransaction> fakePending = [];
   List<PendingTransaction> fakeNeedsAi = [];
   PasteOutcome nextOutcome = PasteOutcome.parsed;
+  PendingTransaction? parsedPending;
   AiRunResult fakeLastRun = AiRunResult.done;
   bool fakeBusy = false;
 
@@ -71,6 +74,10 @@ class FakePendingProvider extends ChangeNotifier implements PendingProvider {
     submittedText = raw;
     if (raw.trim().isEmpty || raw.length > 1000) {
       return PasteOutcome.invalid;
+    }
+    if (nextOutcome == PasteOutcome.parsed && parsedPending != null) {
+      fakePending.add(parsedPending!);
+      notifyListeners();
     }
     return nextOutcome;
   }
@@ -280,6 +287,112 @@ void main() {
   });
 
   group('PasteMessageScreen tests', () {
+    GoRouter navigationRouter() => GoRouter(
+          initialLocation: '/more-test',
+          routes: [
+            GoRoute(
+                path: '/more-test', builder: (_, __) => const MoreMenuScreen()),
+            GoRoute(
+                path: AppRoutes.pendingInbox,
+                builder: (_, __) => const PendingInboxScreen()),
+            GoRoute(
+              path: AppRoutes.pasteMessage,
+              builder: (_, state) => PasteMessageScreen(
+                openedFromInbox:
+                    state.uri.queryParameters['fromInbox'] == 'true',
+              ),
+            ),
+          ],
+        );
+
+    testWidgets('parsed item opened from inbox keeps back to More screen',
+        (tester) async {
+      final fakePending = FakePendingProvider()
+        ..parsedPending = PendingTransaction(
+          id: 'parsed-1',
+          userId: 'user-1',
+          source: PendingSource.text,
+          maskedContent: 'GD 38.000 VND',
+          amount: 38000,
+          type: CategoryType.income,
+          transactionDate: DateTime(2026, 11, 4),
+          note: 'Tiền bo',
+          sourceHash: 'parsed-hash',
+          status: PendingStatus.pending,
+        );
+      final router = navigationRouter();
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MultiProvider(
+        providers: _testProviders(pending: fakePending),
+        child: MaterialApp.router(routerConfig: router),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Hộp thư chờ duyệt'), 100);
+      await tester.tap(find.text('Hộp thư chờ duyệt'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PendingInboxScreen), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('paste_message_fab')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PasteMessageScreen), findsOneWidget);
+      await tester.enterText(
+          find.byKey(const ValueKey('paste_message_input')), 'GD 38.000 VND');
+      await tester.ensureVisible(find.text('Phân tích'));
+      await tester.tap(find.text('Phân tích'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PendingInboxScreen), findsOneWidget);
+      expect(find.text('Tiền bo'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(MoreMenuScreen), findsOneWidget);
+      expect(find.text('Thêm'), findsOneWidget);
+    });
+
+    testWidgets('parsed item entered from More retains a back route',
+        (tester) async {
+      final fakePending = FakePendingProvider()
+        ..parsedPending = PendingTransaction(
+          id: 'parsed-2',
+          userId: 'user-1',
+          source: PendingSource.text,
+          maskedContent: 'GD 50.000 VND',
+          amount: 50000,
+          type: CategoryType.expense,
+          transactionDate: DateTime(2026, 11, 4),
+          note: 'Ăn trưa',
+          sourceHash: 'parsed-hash-2',
+          status: PendingStatus.pending,
+        );
+      final router = navigationRouter();
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MultiProvider(
+        providers: _testProviders(pending: fakePending),
+        child: MaterialApp.router(routerConfig: router),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Dán tin nhắn'), 100);
+      await tester.tap(find.text('Dán tin nhắn').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const ValueKey('paste_message_input')), 'GD 50.000 VND');
+      await tester.ensureVisible(find.text('Phân tích'));
+      await tester.tap(find.text('Phân tích'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PendingInboxScreen), findsOneWidget);
+      expect(find.text('Ăn trưa'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(MoreMenuScreen), findsOneWidget);
+    });
+
     testWidgets(
         'Has multiline TextField, 1000 max length, disclaimer and Phân tích button',
         (tester) async {

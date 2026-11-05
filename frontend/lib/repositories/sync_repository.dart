@@ -120,6 +120,9 @@ class SyncRepository {
   final DatabaseExecutor _db;
   SyncRepository(this._db);
 
+  /// Installed by the app to debounce automatic pushes after local writes.
+  static void Function()? onLocalChange;
+
   Future<void> enqueue(
       {required String tableName,
       required String recordId,
@@ -134,6 +137,7 @@ class SyncRepository {
                 isSynced: false,
                 createdAt: nowUtc())
             .toMap());
+    onLocalChange?.call();
   }
 
   Future<List<SyncQueueItem>> getPending() async {
@@ -161,6 +165,7 @@ class SyncRepository {
               .toMap());
     }
     await batch.commit(noResult: true);
+    onLocalChange?.call();
   }
 
   Future<SyncBatch> buildPushBatch(String userId) async {

@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import 'core/network/api_client.dart';
 import 'core/network/api_endpoints.dart';
 import 'core/scheduled/due_gate.dart';
+import 'core/utils/ledger_refresh.dart';
 import 'screens/scheduled/due_dialog.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/ai_suggestion_provider.dart';
@@ -19,6 +20,7 @@ import 'providers/transaction_provider.dart';
 import 'providers/transfer_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'repositories/ai_suggestion_repository.dart';
+import 'repositories/auto_sync_service.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/budget_repository.dart';
 import 'repositories/category_repository.dart';
@@ -49,7 +51,7 @@ class App extends StatefulWidget {
   State<App> createState() => _AppState();
 }
 
-class _AppState extends State<App> {
+class _AppState extends State<App> with WidgetsBindingObserver {
   late final AuthRepository _authRepository = AuthRepository(widget.database);
   late final AuthProvider _authProvider = AuthProvider(_authRepository)
     ..bootstrap();
@@ -70,11 +72,67 @@ class _AppState extends State<App> {
         .get(ApiEndpoints.syncPull, query: query)) as Map<String, dynamic>,
   );
   late final SyncService _syncService = SyncService(_syncPush, _syncPull);
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  AuthStatus? _lastStatus;
+  late final AutoSyncService _autoSync = AutoSyncService(
+    _syncService,
+    () => _authProvider.currentUser?.id,
+    _refreshAfterSync,
+  );
 
   @override
   void initState() {
     super.initState();
     _authProvider.onLoggedIn = _pullAfterLogin;
+    WidgetsBinding.instance.addObserver(this);
+    SyncRepository.onLocalChange = _autoSync.request;
+    ApiClient.instance.onUnauthorized = _onUnauthorized;
+    _authProvider.addListener(_onAuthChanged);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authProvider.removeListener(_onAuthChanged);
+    SyncRepository.onLocalChange = null;
+    ApiClient.instance.onUnauthorized = null;
+    _autoSync.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _autoSync.onResume();
+  }
+
+  void _onAuthChanged() {
+    final status = _authProvider.status;
+    if (status == AuthStatus.authenticated &&
+        _lastStatus != AuthStatus.authenticated) {
+      if (ApiClient.instance.hasToken) _autoSync.clearUnauthorized();
+      _autoSync.request(immediate: true);
+    }
+    _lastStatus = status;
+  }
+
+  void _onUnauthorized() {
+    if (_autoSync.needsRelogin) return;
+    _autoSync.markUnauthorized();
+    _messengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text(
+            'Phiên đăng nhập hết hạn. Đăng xuất rồi đăng nhập lại để đồng bộ.'),
+        duration: Duration(seconds: 8),
+      ));
+  }
+
+  Future<void> _refreshAfterSync() async {
+    final context = rootNavigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    await context.read<CategoryProvider>().load();
+    if (!context.mounted) return;
+    await LedgerRefresh.all(context).run();
   }
 
   Future<void> _pullAfterLogin(String userId) async {
@@ -114,6 +172,7 @@ class _AppState extends State<App> {
 
         // Auth is the root provider everything else depends on.
         ChangeNotifierProvider.value(value: _authProvider),
+        ChangeNotifierProvider.value(value: _autoSync),
 
         // Per-user providers rebuild automatically when the logged-in user changes.
         ChangeNotifierProxyProvider<AuthProvider, WalletProvider>(
@@ -220,6 +279,7 @@ class _AppState extends State<App> {
         ),
       ],
       child: MaterialApp.router(
+        scaffoldMessengerKey: _messengerKey,
         title: 'Quản Lý Chi Tiêu',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,

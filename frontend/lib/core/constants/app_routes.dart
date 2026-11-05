@@ -42,6 +42,7 @@ class AppRoutes {
   static const String aiSuggestions = '/ai-suggestions';
   static const String pendingInbox = '/pending';
   static const String pasteMessage = '/pending/paste';
+  static const String pasteMessageFromInbox = '/pending/paste?fromInbox=true';
 
   static const String scheduled = '/scheduled';
   static const String scheduledAdd = '/scheduled/add';

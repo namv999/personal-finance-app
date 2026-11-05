@@ -9,7 +9,8 @@ import '../../providers/pending_provider.dart';
 import '../../repositories/pending_transaction_repository.dart';
 
 class PasteMessageScreen extends StatefulWidget {
-  const PasteMessageScreen({super.key});
+  final bool openedFromInbox;
+  const PasteMessageScreen({super.key, this.openedFromInbox = false});
 
   @override
   State<PasteMessageScreen> createState() => _PasteMessageScreenState();
@@ -40,7 +41,7 @@ class _PasteMessageScreenState extends State<PasteMessageScreen> {
           _show('Tin nhắn đã có trong hộp thư.');
           break;
         case PasteOutcome.parsed:
-          context.go(AppRoutes.pendingInbox);
+          _showInboxAfterParse();
           break;
         case PasteOutcome.queued:
           final message = switch (provider.lastRun) {
@@ -48,21 +49,22 @@ class _PasteMessageScreenState extends State<PasteMessageScreen> {
               'Đang offline. Tin vẫn được lưu trên máy để phân tích khi có mạng.',
             AiRunResult.rateLimited =>
               'AI đang giới hạn lượt gọi. Tin vẫn được lưu trên máy để thử lại sau.',
-            AiRunResult.unavailable || AiRunResult.error =>
+            AiRunResult.unavailable ||
+            AiRunResult.error =>
               'AI tạm lỗi hoặc cần thử lại. Tin vẫn được lưu trên máy.',
             AiRunResult.done =>
               'Chưa phân tích được giao dịch. Tin vẫn được lưu trên máy để thử lại.',
             _ => 'Tin vẫn được lưu trên máy để thử lại sau.',
           };
           _show(message);
-          _returnToInbox();
+          _returnToPrevious();
           break;
       }
     } on NetworkException {
       if (mounted) {
         _show(
             'Đang offline. Tin vẫn được lưu trên máy để phân tích khi có mạng.');
-        _returnToInbox();
+        _returnToPrevious();
       }
     } catch (e) {
       if (mounted) {
@@ -73,7 +75,18 @@ class _PasteMessageScreenState extends State<PasteMessageScreen> {
     }
   }
 
-  void _returnToInbox() {
+  void _showInboxAfterParse() {
+    final navigator = Navigator.of(context);
+    if (widget.openedFromInbox && navigator.canPop()) {
+      navigator.pop();
+    } else if (navigator.canPop()) {
+      context.pushReplacement(AppRoutes.pendingInbox);
+    } else {
+      context.go(AppRoutes.pendingInbox);
+    }
+  }
+
+  void _returnToPrevious() {
     final navigator = Navigator.of(context);
     if (navigator.canPop()) navigator.pop();
   }

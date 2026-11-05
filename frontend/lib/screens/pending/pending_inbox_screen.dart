@@ -302,7 +302,7 @@ class _PendingInboxScreenState extends State<PendingInboxScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('paste_message_fab'),
-        onPressed: () => context.push(AppRoutes.pasteMessage),
+        onPressed: () => context.push(AppRoutes.pasteMessageFromInbox),
         icon: const Icon(Icons.content_paste),
         label: const Text('Dán tin nhắn'),
       ),

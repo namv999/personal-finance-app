@@ -87,6 +87,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     if (_saving || !_formKey.currentState!.validate() || _walletId == null) {
       return;
     }
+    if (isEditing && _editing == null) return;
     setState(() => _saving = true);
     final provider = context.read<TransactionProvider>();
     final refresh = LedgerRefresh.of(context);
@@ -114,7 +115,13 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         );
       }
       await refresh.run();
-      if (mounted) context.pop();
+      if (mounted) {
+        if (isEditing) {
+          context.pop();
+        } else {
+          context.pushReplacement(AppRoutes.transactions);
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

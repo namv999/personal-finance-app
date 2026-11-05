@@ -106,10 +106,12 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
         );
       }
       if (mounted) {
-        if (!isEditing) {
+        if (isEditing) {
+          context.pop();
+        } else if (widget.isRequired) {
           context.go(AppRoutes.wallets);
         } else {
-          context.pop();
+          context.pushReplacement(AppRoutes.wallets);
         }
       }
     } catch (e) {

@@ -156,7 +156,9 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
           builder: (c, s) => const PendingInboxScreen()),
       GoRoute(
           path: AppRoutes.pasteMessage,
-          builder: (c, s) => const PasteMessageScreen()),
+          builder: (c, s) => PasteMessageScreen(
+                openedFromInbox: s.uri.queryParameters['fromInbox'] == 'true',
+              )),
       GoRoute(
           path: AppRoutes.scheduled,
           builder: (c, s) => const ScheduledListScreen()),
