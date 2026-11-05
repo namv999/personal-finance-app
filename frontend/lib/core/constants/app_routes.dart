@@ -40,6 +40,7 @@ class AppRoutes {
 
   static const String pet = '/pet';
   static const String aiSuggestions = '/ai-suggestions';
+  static const String aiChat = '/ai-chat';
   static const String pendingInbox = '/pending';
   static const String pasteMessage = '/pending/paste';
   static const String pasteMessageFromInbox = '/pending/paste?fromInbox=true';

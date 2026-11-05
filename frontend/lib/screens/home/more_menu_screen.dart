@@ -25,6 +25,8 @@ class MoreMenuScreen extends StatelessWidget {
           Icons.pets, 'Thú cưng', 'Chăm sóc thú cưng tiết kiệm', AppRoutes.pet),
       _MenuItem(Icons.auto_awesome_outlined, 'Gợi ý AI',
           'Lời khuyên tài chính hàng tháng', AppRoutes.aiSuggestions),
+      _MenuItem(Icons.chat_bubble_outline, 'Hỏi đáp AI',
+          'Hỏi về chi tiêu của bạn', AppRoutes.aiChat),
       _MenuItem(Icons.inbox_outlined, 'Hộp thư chờ duyệt',
           'Kiểm tra đề xuất giao dịch', AppRoutes.pendingInbox),
       _MenuItem(

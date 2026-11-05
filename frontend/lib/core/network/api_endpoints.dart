@@ -38,6 +38,7 @@ class ApiEndpoints {
   static const String pets = '/pets';
   static const String savingStreaks = '/saving-streaks';
   static const String aiSuggestions = '/ai/suggestions';
+  static const String aiChat = '/ai/chat';
   static const String aiParseText = '/ai/parse-text';
   static const String aiParseImage = '/ai/parse-image';
 

@@ -1,6 +1,6 @@
 # Frontend: cấu trúc và file Dart
 
-Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; có auth, đồng bộ hai chiều, phân tích giao dịch từ tin nhắn dán/ảnh, luồng duyệt đề xuất trước khi tạo transaction và màn gợi ý thu chi AI. Hộp thư chờ duyệt cho phép chụp/chọn ảnh, nén, xin đồng ý trước khi gửi tới backend/Gemini và chỉ lưu đề xuất cùng hash byte ảnh (không lưu ảnh). Ảnh cần mạng, giới hạn 3 MB; hash ảnh giúp phát hiện ảnh trùng theo user. Màn gợi ý giải thích kỳ dự kiến và khoảng ngày dữ liệu. Phần đọc SMS inbox có các tiện ích xin quyền, đọc tin gần đây và lọc sơ bộ tin có khả năng là giao dịch.
+Cập nhật theo code Flutter hiện có. App offline-first dùng SQLite, Provider và Dio; có auth, đồng bộ hai chiều, phân tích giao dịch từ tin nhắn dán/ảnh, luồng duyệt đề xuất trước khi tạo transaction, màn gợi ý thu chi AI và chat tài chính theo phiên không lưu lịch sử. Hộp thư chờ duyệt cho phép chụp/chọn ảnh, nén, xin đồng ý trước khi gửi tới backend/Gemini và chỉ lưu đề xuất cùng hash byte ảnh (không lưu ảnh). Ảnh cần mạng, giới hạn 3 MB; hash ảnh giúp phát hiện ảnh trùng theo user. Màn gợi ý giải thích kỳ dự kiến và khoảng ngày dữ liệu. Phần đọc SMS inbox có các tiện ích xin quyền, đọc tin gần đây và lọc sơ bộ tin có khả năng là giao dịch.
 
 ```text
 frontend/
@@ -47,6 +47,7 @@ frontend/
 │   │   ├── user.dart
 │   │   └── wallet.dart
 │   ├── providers/
+│   │   ├── ai_chat_provider.dart
 │   │   ├── ai_suggestion_provider.dart
 │   │   ├── auth_provider.dart
 │   │   ├── budget_provider.dart
@@ -58,6 +59,7 @@ frontend/
 │   │   ├── transfer_provider.dart
 │   │   └── wallet_provider.dart
 │   ├── repositories/
+│   │   ├── ai_chat_repository.dart
 │   │   ├── ai_suggestion_repository.dart
 │   │   ├── auth_repository.dart
 │   │   ├── budget_repository.dart
@@ -75,6 +77,7 @@ frontend/
 │   │   ├── transfer_repository.dart
 │   │   └── wallet_repository.dart
 │   ├── screens/
+│   │   ├── ai_chat/ai_chat_screen.dart
 │   │   ├── splash_screen.dart
 │   │   ├── ai_suggestions/ai_suggestion_screen.dart
 │   │   ├── auth/

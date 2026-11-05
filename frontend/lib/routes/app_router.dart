@@ -5,6 +5,7 @@ import '../core/constants/app_routes.dart';
 import '../providers/auth_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../screens/ai_suggestions/ai_suggestion_screen.dart';
+import '../screens/ai_chat/ai_chat_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/budgets/budget_form_screen.dart';
@@ -151,6 +152,7 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
       GoRoute(
           path: AppRoutes.aiSuggestions,
           builder: (c, s) => const AiSuggestionScreen()),
+      GoRoute(path: AppRoutes.aiChat, builder: (c, s) => const AiChatScreen()),
       GoRoute(
           path: AppRoutes.pendingInbox,
           builder: (c, s) => const PendingInboxScreen()),
