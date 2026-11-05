@@ -1,12 +1,12 @@
 # PHASE2_SUMMARY: Backend và tích hợp Flutter-Backend
 
-Cập nhật: 26/10/2026. Trạng thái: **Phase 2 hoàn thành (P2.1 đến P2.7)**.
+Cập nhật: 05/11/2026. Trạng thái: **Phase 2 hoàn thành (P2.1 đến P2.7), đã bổ sung lịch giao dịch đồng bộ và auto-sync Flutter**.
 
 ## 1. Đã làm được gì
 
 | Mã | Nội dung | Kết quả |
 |---|---|---|
-| P2.1 | Chốt contract | `docs/openapi.yaml`, `docs/SYNC_RULES.md` |
+| P2.1 | Chốt contract | `docs/api/openapi.yaml`, `docs/SYNC_RULES.md` |
 | P2.2 | Nền backend | Spring Boot, SQL Server, Flyway V1 |
 | P2.3 | Auth | JWT, `/auth/register`, `/auth/login` |
 | P2.4 | Sync push | LWW, kiểm tra bản ghi cha, hợp nhất budget |
@@ -19,7 +19,7 @@ Cập nhật: 26/10/2026. Trạng thái: **Phase 2 hoàn thành (P2.1 đến P2.
 - App Flutter **offline-first**: mọi thao tác ghi vào SQLite trước, đồng thời ghi `sync_queue` trong cùng một transaction.
 - Khi đồng bộ, `SyncService.syncAll(userId)` làm theo thứ tự: push các bản ghi bẩn, xử lý kết quả `REJECTED`, rồi pull. Push lỗi thì không pull.
 - Xung đột giải quyết bằng Last-Write-Wins theo `updated_at` (UTC). Xóa là xóa mềm (`is_deleted`).
-- Server gán `server_version` (SEQUENCE dùng chung 6 bảng). Client dùng nó làm cursor khi pull, không dùng timestamp.
+- Server gán `server_version` (SEQUENCE dùng chung cho các bảng đồng bộ, gồm `scheduled_transactions`). Client dùng nó làm cursor khi pull, không dùng timestamp.
 - Các giá trị suy ra (`current_balance`, `saved_amount`, streak, XP của pet) không đồng bộ. Client tính lại sau mỗi lần pull hoặc xử lý từ chối.
 - Backend lấy `userId` từ JWT, không nhận từ body.
 
@@ -46,7 +46,7 @@ Kết quả push từng bản ghi: `APPLIED`, `SKIPPED_NEWER`, hoặc `REJECTED`
 
 `GET /transactions` nhận: `q` (tìm trong `note`, không phân biệt hoa thường, có phân biệt dấu), `type`, `wallet_id`, `category_id`, `from`, `to`, `min_amount`, `max_amount`, `page` (từ 0), `size` (1 đến 100, mặc định 20). Sắp xếp theo `transaction_date` giảm dần. Tham số sai trả 400 `VALIDATION_FAILED`.
 
-Contract đầy đủ nằm trong `docs/openapi.yaml`, quy tắc đồng bộ trong `docs/SYNC_RULES.md`.
+Contract đầy đủ nằm trong `docs/api/openapi.yaml`, quy tắc đồng bộ trong `docs/SYNC_RULES.md`.
 
 ## 4. Cài đặt môi trường
 
@@ -198,8 +198,9 @@ Kỳ vọng: mọi kết quả là `APPLIED`. Gửi lại lần hai sẽ là `SK
 - Số dư ví có thể âm sau khi hợp nhất dữ liệu nhiều máy, app chỉ cảnh báo.
 - Bản ghi `INVALID` chỉ được ghi log và nằm lại ở local, không tự sửa, máy khác không thấy.
 - Đăng nhập online nhưng pull lỗi vẫn cho vào app, người dùng có thể bị yêu cầu tạo ví trước khi dữ liệu server về.
-- Chưa tự động đồng bộ khi mở app hoặc sau mỗi lần ghi, hiện chỉ có nút "Đồng bộ ngay" và pull sau đăng nhập.
-- `ApiClient.onUnauthorized` chưa được gán, nên token hết hạn chưa dẫn đến thông báo "đăng nhập lại để đồng bộ".
+- Auto-sync chạy sau local write (debounce 3 giây), khi app resume (theo khoảng nghỉ) và sau đăng nhập. Cài đặt vẫn có nút "Đồng bộ ngay". Các yêu cầu song song chờ kết quả lượt đang chạy và yêu cầu phát sinh sẽ chạy bù.
+- Khi token hết hạn, auto-sync dừng và hiển thị thông báo đăng xuất/đăng nhập lại; khi đăng xuất trạng thái hết hạn, bộ đếm lỗi và thời điểm sync được reset.
+- Pull phân biệt `received` với `applied`: chỉ bản ghi thực sự cập nhật SQLite mới phát `pulledTick` và làm mới UI, tránh nạp lại dữ liệu sau mỗi push/pull không đổi.
 - `GET /transactions` phân trang theo offset (dữ liệu đổi giữa hai lần gọi có thể lệch trang), tìm kiếm có phân biệt dấu, và chỉ đọc dữ liệu đã đồng bộ. Tìm kiếm trong app dùng SQLite local.
 - `GlobalExceptionHandler` gán mọi `DataIntegrityViolationException` thành `EMAIL_ALREADY_EXISTS`. Chỉ xảy ra khi hai request đăng ký trùng nhau đến cùng lúc.
 
@@ -208,7 +209,7 @@ Kỳ vọng: mọi kết quả là `APPLIED`. Gửi lại lần hai sẽ là `SK
 - [ ] PR `feature/be-search-tests` đã merge vào `develop`, commit P2.5 trên `feature/be-auth-sync` đã được merge
 - [ ] FE: `ledger_refresh.dart` (làm mới budget khi xóa category), `wallet_delete_dialog.dart`, đường dữ liệu wallet detail
 - [ ] Gỡ `package:http` khỏi `pubspec.yaml` khi không còn file nào import
-- [ ] Gỡ tile test 600 giao dịch trong Settings
+- [x] Tile kiểm thử 600 giao dịch trong Settings (chỉ debug): đồng bộ và xác minh số lượng bằng API tìm kiếm server
 - [ ] Sửa tài liệu và báo cáo: `GET /sync/pull?since=...` thành `GET /sync/pull?cursor=<int64>&limit=500`
 - [ ] `DB_Flutter_Idea.md`: xóa dấu `}` thừa ở cuối khối ERD (đang làm Mermaid không hiển thị)
 
@@ -216,5 +217,5 @@ Kỳ vọng: mọi kết quả là `APPLIED`. Gửi lại lần hai sẽ là `SK
 
 - Tên bảng và trường bằng tiếng Anh, comment bằng tiếng Việt.
 - Git: `main`, `develop`, `feature/*`, tích hợp qua Pull Request.
-- OpenAPI là contract duy nhất giữa frontend và backend: thêm hoặc đổi endpoint thì sửa `docs/openapi.yaml` trước khi viết code.
+- OpenAPI là contract duy nhất giữa frontend và backend: thêm hoặc đổi endpoint thì sửa `docs/api/openapi.yaml` trước khi viết code.
 - Không commit API key, mật khẩu, JWT secret.

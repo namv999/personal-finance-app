@@ -40,7 +40,9 @@ void main() {
   test('successful changed sync records time and refreshes data', () async {
     final sync = _FakeSync((_) async => SyncOutcome()
       ..push = PushResult()
-      ..pull = (PullResult()..received = 1));
+      ..pull = (PullResult()
+        ..received = 1
+        ..applied = 1));
     var refreshes = 0;
     final service = AutoSyncService(sync, () => 'u1', () async {
       refreshes++;
@@ -54,6 +56,22 @@ void main() {
     expect(service.lastSyncAt, isNotNull);
     expect(service.lastError, isNull);
     expect(refreshes, 1);
+  });
+
+  test('received but unapplied records do not refresh data', () async {
+    final sync = _FakeSync((_) async => SyncOutcome()
+      ..push = PushResult()
+      ..pull = (PullResult()..received = 1));
+    var refreshes = 0;
+    final service = AutoSyncService(sync, () => 'u1', () async {
+      refreshes++;
+    });
+    addTearDown(service.dispose);
+
+    final out = await service.syncNow();
+
+    expect(out.ok, isTrue);
+    expect(refreshes, 0);
   });
 
   test('unauthorized sync pauses future auto requests', () async {

@@ -14,6 +14,51 @@ class TransactionRepository {
   final DatabaseExecutor _db;
   TransactionRepository(this._db);
 
+  /// Creates a uniquely tagged batch used by the Settings sync stress tile.
+  /// Records and their queue entries are committed atomically so the normal
+  /// push path can exercise its 500-record request limit.
+  Future<String> createSyncTestBatch({
+    required String userId,
+    required String walletId,
+    required int count,
+  }) async {
+    if (count <= 0) throw ArgumentError.value(count, 'count');
+    final marker = 'SYNC600_${DateTime.now().microsecondsSinceEpoch}';
+    await _db.inTxn((e) async {
+      final now = nowUtc();
+      final date = DateTime.parse(businessToday());
+      final ids = <String>[];
+      final batch = e.batch();
+      for (var i = 0; i < count; i++) {
+        final id = IdGenerator.next();
+        ids.add(id);
+        batch.insert(
+          Tables.transactions,
+          FinanceTransaction(
+            id: id,
+            userId: userId,
+            walletId: walletId,
+            type: CategoryType.expense,
+            amount: 1,
+            note: '$marker-$i',
+            transactionDate: date,
+            createdAt: now,
+            updatedAt: now,
+          ).toMap(),
+        );
+      }
+      await batch.commit(noResult: true);
+      await SyncRepository(e).enqueueMany(
+        tableName: Tables.transactions,
+        recordIds: ids,
+        action: SyncAction.create,
+      );
+      await WalletRepository(e).recomputeBalance(walletId);
+      await SavingStreakRepository(e).recompute(userId);
+    });
+    return marker;
+  }
+
   Future<List<FinanceTransaction>> getAll(
     String userId, {
     String? walletId,

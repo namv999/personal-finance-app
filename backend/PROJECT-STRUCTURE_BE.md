@@ -55,6 +55,7 @@ backend/
     │   │   │   │   ├── PushStatus.java
     │   │   │   │   ├── RejectReason.java
     │   │   │   │   ├── SavingGoalDto.java
+    │   │   │   │   ├── ScheduledTransactionDto.java
     │   │   │   │   ├── SyncDto.java
     │   │   │   │   ├── TransactionDto.java
     │   │   │   │   ├── TransferDto.java
@@ -63,6 +64,7 @@ backend/
     │   │   │   │   ├── Category.java
     │   │   │   │   ├── MonthlyBudget.java
     │   │   │   │   ├── SavingGoal.java
+    │   │   │   │   ├── ScheduledTransaction.java
     │   │   │   │   ├── SyncEntity.java
     │   │   │   │   ├── Transaction.java
     │   │   │   │   ├── Transfer.java
@@ -71,6 +73,7 @@ backend/
     │   │   │       ├── CategoryRepository.java
     │   │   │       ├── MonthlyBudgetRepository.java
     │   │   │       ├── SavingGoalRepository.java
+    │   │   │       ├── ScheduledTransactionRepository.java
     │   │   │       ├── TransactionRepository.java
     │   │   │       ├── TransferRepository.java
     │   │   │       └── WalletRepository.java
@@ -85,7 +88,8 @@ backend/
     │   │   ├── application.yml
     │   │   └── db/migration/
     │   │       ├── V1__init.sql
-    │   │       └── V2__tx_search_index.sql
+    │   │       ├── V2__tx_search_index.sql
+    │   │       └── V3__scheduled_transactions.sql
     │   └── test/
     │       ├── java/com/pfm/backend/
     │       │   ├── AbstractIntegrationTest.java

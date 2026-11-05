@@ -247,8 +247,8 @@ class SyncRepository {
         done.add('${rejection.table}|${rejection.id}');
         switch (rejection.reason) {
           case 'PARENT_DELETED':
-            await e.update(rejection.table,
-                {'is_deleted': 1, 'updated_at': nowUtcIso()},
+            await e.update(
+                rejection.table, {'is_deleted': 1, 'updated_at': nowUtcIso()},
                 where: 'id = ? AND user_id = ?',
                 whereArgs: [rejection.id, userId]);
             break;
@@ -288,9 +288,10 @@ class SyncRepository {
       (await SharedPreferences.getInstance())
           .setString('sync_cursor_$userId', cursor);
 
-  Future<void> applyPulled(
+  Future<int> applyPulled(
           String userId, Map<String, List<Map<String, dynamic>>> changes) =>
       _db.inTxn((e) async {
+        var applied = 0;
         await e.execute('PRAGMA defer_foreign_keys = ON');
         for (final table in syncTableOrder) {
           for (final raw in changes[table] ?? const <Map<String, dynamic>>[]) {
@@ -350,7 +351,9 @@ class SyncRepository {
               await e.update(table, remote,
                   where: 'id = ?', whereArgs: [remote['id']]);
             }
+            applied++;
           }
         }
+        return applied;
       });
 }

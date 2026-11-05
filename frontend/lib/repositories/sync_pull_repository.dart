@@ -11,6 +11,7 @@ import 'wallet_repository.dart';
 class PullResult {
   int pages = 0;
   int received = 0;
+  int applied = 0;
   int cursor = 0;
   bool unauthorized = false;
   bool skippedNoToken = false;
@@ -74,8 +75,9 @@ class SyncPullRepository {
       }
 
       // Áp dụng và tính lại giá trị suy ra trong CÙNG một transaction
+      var applied = 0;
       await _db.inTxn((e) async {
-        await SyncRepository(e).applyPulled(userId, merged);
+        applied = await SyncRepository(e).applyPulled(userId, merged);
         await ScheduledTransactionRepository(e).reconcileAfterPull(userId);
         await _recomputeDerived(e, userId);
       });
@@ -83,6 +85,7 @@ class SyncPullRepository {
       // Cursor chỉ lưu sau khi transaction commit thành công
       await _sync.saveCursor(userId, '$cursor');
       result.cursor = cursor;
+      result.applied = applied;
     } on ApiException catch (e) {
       if (e.statusCode == 401 && e.code == 'UNAUTHORIZED') {
         result.unauthorized = true;

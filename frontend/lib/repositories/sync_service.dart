@@ -49,7 +49,7 @@ class SyncService {
       out.pull = pull;
       out.unauthorized = pull.unauthorized;
       out.error = pull.error;
-      if (pull.ok) pulledTick.value++;
+      if (pull.ok && pull.applied > 0) pulledTick.value++;
     } finally {
       _running = false;
     }

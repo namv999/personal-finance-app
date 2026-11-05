@@ -107,6 +107,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
 
   void _onAuthChanged() {
     final status = _authProvider.status;
+    if (status == AuthStatus.unauthenticated) _autoSync.reset();
     if (status == AuthStatus.authenticated &&
         _lastStatus != AuthStatus.authenticated) {
       if (ApiClient.instance.hasToken) _autoSync.clearUnauthorized();
@@ -242,12 +243,12 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         ),
         ChangeNotifierProxyProvider<AuthProvider, AiSuggestionProvider>(
           create: (ctx) => AiSuggestionProvider(
-              ctx.read<AiSuggestionRepository>(), _syncService, _noUser),
+              ctx.read<AiSuggestionRepository>(), _autoSync, _noUser),
           update: (ctx, auth, previous) {
             final id = auth.currentUser?.id ?? _noUser;
             if (previous != null && previous.userId == id) return previous;
             return AiSuggestionProvider(
-                ctx.read<AiSuggestionRepository>(), _syncService, id)
+                ctx.read<AiSuggestionRepository>(), _autoSync, id)
               ..load();
           },
         ),
@@ -287,7 +288,6 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         builder: (context, child) => DueGate(
           navigatorKey: rootNavigatorKey,
           onShowDue: showDueDialog,
-
           child: child ?? const SizedBox.shrink(),
         ),
       ),

@@ -207,8 +207,8 @@ paths:
       tags: [Sync]
       summary: Đẩy snapshot hiện tại của các bản ghi bẩn
       description: |
-        Thứ tự xử lý cố định: wallets, categories, saving_goals, transactions và transfers,
-        monthly_budgets. Mỗi bản ghi xử lý độc lập, push lặp lại là an toàn.
+        Thứ tự xử lý cố định: wallets, categories, saving_goals, transactions, transfers,
+        monthly_budgets và scheduled_transactions. Mỗi bản ghi xử lý độc lập, push lặp lại là an toàn.
         LWW theo updated_at; nếu updated_at > now + 5 phút thì ép về now.
         Mỗi lần ghi server gán server_version. Không validate đủ số dư.
         user_id trong bản ghi là tùy chọn; có mà khác user trong token thì REJECTED/INVALID.
@@ -232,7 +232,7 @@ paths:
       tags: [Sync]
       summary: Kéo thay đổi có server_version lớn hơn cursor
       description: |
-        Client gộp mọi trang, áp dụng trong một transaction, rồi mới lưu cursor.
+        Bao gồm scheduled_transactions. Client gộp mọi trang, áp dụng trong một transaction, rồi mới lưu cursor.
         Cursor do server cấp, không phải timestamp; lần đầu là 0.
         Chỉ trả bản ghi của user trong token, không trả danh mục hệ thống.
       parameters:

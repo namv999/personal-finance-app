@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,8 @@ import '../../core/network/api_endpoints.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/auto_sync_service.dart';
 import '../../repositories/sync_pull_repository.dart';
+import '../../repositories/transaction_repository.dart';
+import '../../repositories/wallet_repository.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -66,6 +69,13 @@ class SettingsScreen extends StatelessWidget {
                 ..showSnackBar(SnackBar(content: Text(message)));
             },
           ),
+          if (kDebugMode)
+            ListTile(
+              leading: const Icon(Icons.speed),
+              title: const Text('Tạo 600 giao dịch test và kiểm tra server'),
+              subtitle: const Text('Debug · push theo lô, xác minh bằng API'),
+              onTap: () => _run600TransactionCheck(context),
+            ),
           ListTile(
             leading: const Icon(Icons.restart_alt),
             title: const Text('Reset cursor về 0 (debug)'),
@@ -111,5 +121,77 @@ class SettingsScreen extends StatelessWidget {
     return time == null
         ? 'Chưa đồng bộ trong phiên này'
         : 'Lần cuối: ${DateFormat('HH:mm dd/MM').format(time.toLocal())}';
+  }
+
+  Future<void> _run600TransactionCheck(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tạo giao dịch kiểm thử?'),
+        content: const Text(
+            'Tạo 600 giao dịch chi 1 VND trong ví hiện tại, đồng bộ lên máy chủ và kiểm tra đủ 600 bản ghi.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Bắt đầu'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    void showResult(String text) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(text)));
+    }
+
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId == null) {
+      showResult('Cần đăng nhập để tạo giao dịch kiểm thử');
+      return;
+    }
+    if (!ApiClient.instance.hasToken) {
+      showResult('Cần đăng nhập online để kiểm tra dữ liệu trên máy chủ');
+      return;
+    }
+
+    try {
+      final wallets = await context.read<WalletRepository>().getAll(userId);
+      if (!context.mounted) return;
+      if (wallets.isEmpty) {
+        showResult('Tạo một ví trước khi chạy kiểm tra');
+        return;
+      }
+      showResult('Đang tạo 600 giao dịch kiểm thử...');
+      final autoSync = context.read<AutoSyncService>();
+      final marker =
+          await context.read<TransactionRepository>().createSyncTestBatch(
+                userId: userId,
+                walletId: wallets.first.id,
+                count: 600,
+              );
+      final sync = await autoSync.syncNow();
+      if (!context.mounted) return;
+      if (!sync.ok) {
+        showResult('Đồng bộ thất bại: ${sync.error ?? 'UNAUTHORIZED'}');
+        return;
+      }
+
+      final response = await ApiClient.instance.get(
+        ApiEndpoints.transactions,
+        query: {'q': marker, 'page': 0, 'size': 1},
+      ) as Map<String, dynamic>;
+      final serverCount = (response['total_elements'] as num).toInt();
+      showResult(serverCount == 600
+          ? 'Máy chủ đã nhận đủ 600/600 giao dịch'
+          : 'Máy chủ hiện có $serverCount/600 giao dịch kiểm thử');
+    } catch (e) {
+      if (context.mounted) showResult('Không thể kiểm tra 600 giao dịch: $e');
+    }
   }
 }

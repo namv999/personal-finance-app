@@ -192,7 +192,7 @@ erDiagram
 | `saving_goals` | id | user_id, wallet_id (nullable) | Có | `saved_amount` là cache, không đồng bộ |
 | `transfers` | id | user_id, source_wallet_id, destination_wallet_id, goal_id (nullable) | Có | Chuyển nội bộ, KHÔNG tính vào thu/chi |
 | `monthly_budgets` | id | user_id, category_id | Có | Hợp nhất theo khóa tự nhiên (user_id, category_id, month) khi còn hiệu lực |
-| `scheduled_transactions` | id | user_id, wallet_id, category_id (nullable) | Có | Lịch giao dịch; `next_due_date` là kỳ chưa xử lý tiếp theo |
+| `scheduled_transactions` | id | user_id, wallet_id, category_id (nullable) | Có | Push/pull hai chiều; `next_due_date` là kỳ chưa xử lý tiếp theo, `NULL` khi lịch một lần đã xử lý hoặc đã hết kỳ. `server_version` chỉ có trên backend để phân trang cursor, không gửi trong push |
 | `pets` | id | user_id (unique) | Không | XP, level, shape suy ra từ dữ liệu. `pet_name` chỉ lưu local |
 | `saving_streaks` | id | user_id (unique) | Không | Suy ra từ transfers hợp lệ, mỗi máy tự tính lại |
 | `ai_suggestions` | id | user_id | Không | Cache local kết quả backend trả về. Unique (user_id, period_type, period_start) |
@@ -331,6 +331,7 @@ CREATE TABLE scheduled_transactions (
     CHECK ((repeat_unit IS NULL AND repeat_every IS NULL)
         OR (repeat_unit IS NOT NULL AND repeat_every IS NOT NULL))
 );
+-- Backend tương ứng: Flyway V3__scheduled_transactions.sql; server_version do server quản lý.
 
 CREATE TABLE pets (
     id TEXT PRIMARY KEY,

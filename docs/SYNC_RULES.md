@@ -38,4 +38,10 @@
 - Res: {changes: {wallets: [...], categories: [...], saving_goals: [...], transactions: [...], transfers: [...], monthly_budgets: [...], scheduled_transactions: [...]}, next_cursor, has_more}. Lọc server_version > cursor, theo user từ token.
 - Cursor là số do server cấp, không phải timestamp. Lần đầu cursor = 0.
 - Client gộp mọi trang, áp dụng trong 1 transaction, lưu cursor sau khi thành công.
+- `received` là số bản ghi server trả về; `applied` là số bản ghi thực sự được ghi vào SQLite sau khi so `updated_at`. Chỉ khi `applied > 0` mới phát tín hiệu làm mới provider/UI.
 - Tham số cursor thay cho since.
+
+## Auto-sync trên Flutter
+- Ghi local vào `sync_queue` sẽ debounce 3 giây rồi chạy `SyncService`; khi app resume, sync chạy nếu lần gần nhất đã cách ít nhất 30 giây. Cài đặt có thể yêu cầu sync ngay.
+- Các lời gọi sync đồng thời dùng chung lượt đang chạy; yêu cầu phát sinh trong lúc chạy đánh dấu chạy bù. Lỗi bất ngờ được ghi nhận như lỗi sync và đi vào lịch retry.
+- Token hết hạn dừng auto-sync và hiển thị yêu cầu đăng xuất/đăng nhập lại. Đăng xuất xóa trạng thái unauthorized, bộ đếm lỗi và thời điểm sync của phiên trước.

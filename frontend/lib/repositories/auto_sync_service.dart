@@ -20,6 +20,7 @@ class AutoSyncService extends ChangeNotifier {
   Timer? _retryTimer;
   bool _running = false;
   bool _rerun = false;
+  Future<SyncOutcome>? _current;
   bool _unauthorized = false;
   bool _disposed = false;
   int _failures = 0;
@@ -70,18 +71,23 @@ class AutoSyncService extends ChangeNotifier {
   }
 
   /// Shared by automatic runs and the Settings "Sync now" action.
-  Future<SyncOutcome> syncNow() async {
+  Future<SyncOutcome> syncNow() {
     final uid = _userId();
-    if (uid == null) return SyncOutcome()..error = 'NO_USER';
+    if (uid == null) return Future.value(SyncOutcome()..error = 'NO_USER');
     if (_unauthorized) {
-      return SyncOutcome()
+      return Future.value(SyncOutcome()
         ..unauthorized = true
-        ..error = 'UNAUTHORIZED';
+        ..error = 'UNAUTHORIZED');
     }
-    if (_running) {
+    final running = _current;
+    if (running != null) {
       _rerun = true;
-      return SyncOutcome()..error = 'BUSY';
+      return running;
     }
+    return _current = _run(uid).whenComplete(() => _current = null);
+  }
+
+  Future<SyncOutcome> _run(String uid) async {
     _running = true;
     _notify();
     var last = SyncOutcome();
@@ -96,6 +102,7 @@ class AutoSyncService extends ChangeNotifier {
         await _afterSync(last);
       } while (_rerun && last.ok);
     } finally {
+      _rerun = false;
       _running = false;
       _notify();
     }
@@ -127,7 +134,7 @@ class AutoSyncService extends ChangeNotifier {
     _retryTimer?.cancel();
     _notify();
 
-    final changed = (out.pull?.received ?? 0) > 0 ||
+    final changed = (out.pull?.applied ?? 0) > 0 ||
         (out.push?.rejected.isNotEmpty ?? false);
     if (changed) {
       try {
@@ -136,6 +143,17 @@ class AutoSyncService extends ChangeNotifier {
         debugPrint('AutoSync refresh lỗi: $e');
       }
     }
+  }
+
+  /// Clears per-session sync state when the current account logs out.
+  void reset() {
+    _debounceTimer?.cancel();
+    _retryTimer?.cancel();
+    _unauthorized = false;
+    _failures = 0;
+    lastError = null;
+    lastSyncAt = null;
+    _notify();
   }
 
   void _scheduleRetry() {

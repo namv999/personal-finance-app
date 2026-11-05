@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart';
 
 import '../models/ai_suggestion.dart';
 import '../repositories/ai_suggestion_repository.dart';
-import '../repositories/sync_service.dart';
+import '../repositories/auto_sync_service.dart';
 
 class AiSuggestionProvider extends ChangeNotifier {
   final AiSuggestionRepository _repo;
-  final SyncService _sync;
+  final AutoSyncService _sync;
   final String userId;
   AiSuggestionProvider(this._repo, this._sync, this.userId);
 
@@ -20,10 +20,15 @@ class AiSuggestionProvider extends ChangeNotifier {
   AiPeriod get targetPeriod => AiPeriod.next(periodType);
 
   @override
-  void notifyListeners() { if (!_disposed) super.notifyListeners(); }
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
 
   @override
-  void dispose() { _disposed = true; super.dispose(); }
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   Future<void> load() async {
     isLoading = true;
@@ -50,14 +55,17 @@ class AiSuggestionProvider extends ChangeNotifier {
     notifyListeners();
     final type = periodType;
     try {
-      final sync = await _sync.syncAll(userId);
+      final sync = await _sync.syncNow();
       if (!sync.ok) {
-        if (sync.error == 'NO_TOKEN') return const SuggestOutcome(SuggestStatus.offline);
-        if (sync.unauthorized) return const SuggestOutcome(SuggestStatus.unauthorized);
+        if (sync.error == 'NO_TOKEN')
+          return const SuggestOutcome(SuggestStatus.offline);
+        if (sync.unauthorized)
+          return const SuggestOutcome(SuggestStatus.unauthorized);
         return SuggestOutcome(SuggestStatus.syncFailed, sync.error);
       }
       final outcome = await _repo.requestSuggestion(userId, type);
-      if (outcome.status == SuggestStatus.ok && type == periodType) await load();
+      if (outcome.status == SuggestStatus.ok && type == periodType)
+        await load();
       return outcome;
     } finally {
       isRequesting = false;
