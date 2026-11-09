@@ -24,6 +24,8 @@ frontend/
 │   │   ├── sms/
 │   │   │   ├── bank_sms_filter.dart
 │   │   │   └── sms_reader.dart
+│   │   ├── notifications/notification_service.dart
+│   │   ├── scheduled/due_gate.dart
 │   │   ├── theme/app_theme.dart
 │   │   └── utils/
 │   │       ├── budget_status.dart
@@ -31,6 +33,7 @@ frontend/
 │   │       ├── formatters.dart
 │   │       ├── id_generator.dart
 │   │       ├── ledger_refresh.dart
+│   │       ├── occurrence.dart
 │   │       ├── text_masker.dart
 │   │       └── validators.dart
 │   ├── models/
@@ -54,6 +57,7 @@ frontend/
 │   │   ├── category_provider.dart
 │   │   ├── pet_streak_provider.dart
 │   │   ├── pending_provider.dart
+│   │   ├── scheduled_provider.dart
 │   │   ├── saving_goal_provider.dart
 │   │   ├── transaction_provider.dart
 │   │   ├── transfer_provider.dart
@@ -62,6 +66,7 @@ frontend/
 │   │   ├── ai_chat_repository.dart
 │   │   ├── ai_suggestion_repository.dart
 │   │   ├── auth_repository.dart
+│   │   ├── auto_sync_service.dart
 │   │   ├── budget_repository.dart
 │   │   ├── category_repository.dart
 │   │   ├── derived_recompute.dart
@@ -69,6 +74,7 @@ frontend/
 │   │   ├── pending_transaction_repository.dart
 │   │   ├── saving_goal_repository.dart
 │   │   ├── saving_streak_repository.dart
+│   │   ├── scheduled_transaction_repository.dart
 │   │   ├── sync_pull_repository.dart
 │   │   ├── sync_push_repository.dart
 │   │   ├── sync_repository.dart
@@ -98,6 +104,10 @@ frontend/
 │   │   ├── pending/
 │   │   │   ├── paste_message_screen.dart
 │   │   │   └── pending_inbox_screen.dart
+│   │   ├── scheduled/
+│   │   │   ├── due_dialog.dart
+│   │   │   ├── scheduled_form_screen.dart
+│   │   │   └── scheduled_list_screen.dart
 │   │   ├── saving_goals/
 │   │   │   ├── saving_goal_detail_screen.dart
 │   │   │   ├── saving_goal_form_screen.dart
@@ -128,12 +138,17 @@ frontend/
     ├── budget_status_bar_test.dart
     ├── image_helpers_test.dart
     ├── pending_screens_test.dart
+    ├── auto_sync_service_test.dart
+    ├── recurrence_rule_test.dart
+    ├── scheduled_screens_test.dart
     ├── sync_repository_test.dart
     ├── text_masker_test.dart
+    ├── transaction_flow_test.dart
     ├── wallet_delete_dialog_test.dart
+    ├── wallet_flow_test.dart
     └── widget_test.dart
 ```
 
-Cây trên liệt kê các file `.dart` hiện có trong `lib/` và `test/`. Test `TextMasker` được đặt trong `test/` cùng các test khác, không nằm trong mã ứng dụng `lib/`. Các file Dart sinh trong `.dart_tool/` hoặc thư mục build, cùng mã nền tảng Android/iOS/Web/Desktop, không nằm trong cây mã nguồn ứng dụng.
+Cây trên liệt kê các file `.dart` hiện có trong `lib/` và `test/`. Frontend hiện có thêm luồng giao dịch định kỳ (provider, repository, due gate, notification service và due dialog), auto sync và tiện ích occurrence. Test `TextMasker` được đặt trong `test/` cùng các test khác, không nằm trong mã ứng dụng `lib/`. Các file Dart sinh trong `.dart_tool/` hoặc thư mục build, cùng mã nền tảng Android/iOS/Web/Desktop, không nằm trong cây mã nguồn ứng dụng.
 
 `image_picker` được khai báo trong `pubspec.yaml`. Android manifest khai báo intent camera để image picker mở camera hệ thống; app không yêu cầu quyền `CAMERA` riêng.

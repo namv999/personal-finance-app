@@ -105,6 +105,7 @@ backend/
     │       │   │   └── AiSuggestionIntegrationTest.java
     │       │   ├── AuthIntegrationTest.java
     │       │   ├── BackendApplicationTests.java
+    │       │   ├── ScheduledSyncIntegrationTest.java
     │       │   ├── SyncIntegrationTest.java
     │       │   └── TransactionSearchIntegrationTest.java
     │       └── resources/application-test.yml
@@ -112,5 +113,5 @@ backend/
 
 Các API hiện có: `POST /auth/register`, `POST /auth/login`, `POST /sync/push`, `GET /sync/pull`, `GET /transactions`, `POST /ai/parse-text`, `POST /ai/parse-image`, `POST /ai/suggestions` và `POST /ai/chat`. Ngoại trừ auth, các API nghiệp vụ yêu cầu JWT. `/ai/parse-text` chấp nhận tối đa 10 tin SMS/TEXT mỗi request và trả `PARSED`, `NOT_A_TRANSACTION` hoặc `FAILED` cho từng tin. `/ai/parse-image` nhận ảnh Base64 tối đa 3 MB, xác thực JPEG/PNG/WebP bằng chữ ký file, gửi ảnh cùng prompt/schema tới Gemini và chỉ trả đề xuất giao dịch; ảnh không được lưu, ghi chú AI trả về được che số nhạy cảm. `/ai/suggestions` nhận kỳ `WEEK` hoặc `MONTH`; backend tính thu/chi dự kiến, tiền còn lại, tỷ lệ, xu hướng theo kỳ/danh mục và số liệu ngân sách rồi gửi số đã làm tròn nghìn cho Gemini. Gemini trả mảng câu, backend làm sạch và ghép thành nội dung nhiều dòng, đồng thời vẫn đọc định dạng `content` cũ. Response thể hiện trạng thái thiếu dữ liệu khi chưa đủ điều kiện. Lỗi Gemini được log kèm loại nguyên nhân gốc, không ghi nội dung ảnh. `/ai/chat` nhận tối đa 6 tin hội thoại, yêu cầu tin cuối là USER; backend tổng hợp thu, chi, top 5 danh mục và ngân sách trong ba tháng lịch, không gửi số dư/ghi chú/dữ liệu chuyển ví. Dưới 5 giao dịch trả `INSUFFICIENT_DATA` mà không gọi Gemini. Lịch sử chỉ nằm trong prompt của request và không được lưu. Springdoc cung cấp Swagger UI và OpenAPI; hợp đồng API dùng chung được lưu tại `docs/api/openapi.yaml` ở thư mục gốc repository.
 
-Cây trên liệt kê file Java trong `src/main/java`, test Java và cấu hình test, cùng migration SQL đang có. Maven Wrapper có tại `backend/mvnw` và `backend/mvnw.cmd`; không liệt kê wrapper, `target/` hoặc file build sinh tự động trong cây mã nguồn.
+Cây trên liệt kê file Java trong `src/main/java`, test Java và cấu hình test, cùng migration SQL đang có. Test sync hiện có thêm `ScheduledSyncIntegrationTest.java`. Maven Wrapper có tại `backend/mvnw` và `backend/mvnw.cmd`; không liệt kê wrapper, `target/` hoặc file build sinh tự động trong cây mã nguồn.
 
