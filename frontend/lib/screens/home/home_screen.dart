@@ -5,13 +5,16 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/clock.dart';
 import '../../core/utils/ledger_refresh.dart';
 import '../../models/category.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/pending_provider.dart';
 import '../../providers/pet_streak_provider.dart';
+import '../../widgets/quick_action_button.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/icon_color_picker.dart';
@@ -27,6 +30,7 @@ class HomeScreen extends StatelessWidget {
     final txProvider = context.watch<TransactionProvider>();
     final petStreak = context.watch<PetStreakProvider>();
     final categories = context.watch<CategoryProvider>();
+    final pendingCount = context.watch<PendingProvider>().pendingCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -43,6 +47,8 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   _MonthSummaryRow(totals: txProvider.monthTotals),
                   const SizedBox(height: 16),
+                  _AiQuickEntryCard(pendingCount: pendingCount),
+                  const SizedBox(height: 16),
                   _PetStreakRow(pet: petStreak.pet, streak: petStreak.streak),
                   const SizedBox(height: 16),
                   _SpendingByCategoryCard(),
@@ -51,7 +57,7 @@ class HomeScreen extends StatelessWidget {
                     transactions: txProvider.transactions.take(5).toList(),
                     categories: categories,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.fabClearanceDouble),
                 ],
               ),
       ),
@@ -383,6 +389,109 @@ class _RecentTransactionsCard extends StatelessWidget {
                 ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AiQuickEntryCard extends StatelessWidget {
+  final int pendingCount;
+  const _AiQuickEntryCard({required this.pendingCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: AppColors.secondary, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Nhập nhanh bằng AI',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'AI đọc tin nhắn và hóa đơn giúp bạn',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: QuickActionButton(
+                  icon: Icons.sms_outlined,
+                  label: 'Quét SMS',
+                  onTap: () => context.push('/pending?action=sms'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: QuickActionButton(
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Chụp hóa đơn',
+                  onTap: () => context.push('/pending?action=image'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: QuickActionButton(
+                  icon: Icons.content_paste,
+                  label: 'Dán tin nhắn',
+                  onTap: () => context.push(AppRoutes.pasteMessage),
+                ),
+              ),
+            ],
+          ),
+          if (pendingCount > 0) ...[
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => context.push(AppRoutes.pendingInbox),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Có $pendingCount đề xuất chờ duyệt',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -546,7 +546,7 @@ void main() {
       expect(find.text('Ăn uống'), findsOneWidget);
       expect(find.text('Chi tiêu'), findsOneWidget);
       expect(find.text('55%'), findsOneWidget);
-      expect(find.text('Kiểm tra & xác nhận'), findsOneWidget);
+      expect(find.text('Kiểm tra'), findsOneWidget);
       expect(find.text('Bỏ qua'), findsOneWidget);
 
       final chip = tester.widget<Chip>(find.byType(Chip));
@@ -588,11 +588,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap on "Kiểm tra & xác nhận" to open sheet
-      await tester.tap(find.text('Kiểm tra & xác nhận'));
+      await tester.tap(find.text('Kiểm tra'));
       await tester.pumpAndSettle();
 
-      expect(
-          find.text('Kiểm tra & xác nhận'), findsNWidgets(2)); // Title + Sheet
+      expect(find.text('Kiểm tra & xác nhận'), findsOneWidget); // Sheet title
+      expect(find.text('Kiểm tra'), findsOneWidget); // Card
       expect(find.text('Xác nhận'), findsOneWidget);
       expect(find.text('Bỏ qua'), findsNWidgets(2)); // Card + edit sheet
 

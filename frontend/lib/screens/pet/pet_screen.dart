@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/pet.dart';
 import '../../providers/pet_streak_provider.dart';
+import '../../widgets/app_dialog.dart';
 import '../../widgets/loading_view.dart';
 
 class PetScreen extends StatelessWidget {
@@ -122,14 +123,17 @@ class PetScreen extends StatelessWidget {
     final newName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Đổi tên thú cưng'),
         content: TextField(controller: controller, autofocus: true),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Lưu')),
+          AppDialogTwoButtons(
+            cancelLabel: 'Hủy',
+            onCancel: () => Navigator.pop(ctx),
+            confirmLabel: 'Lưu',
+            onConfirm: () => Navigator.pop(ctx, controller.text.trim()),
+          ),
         ],
       ),
     );

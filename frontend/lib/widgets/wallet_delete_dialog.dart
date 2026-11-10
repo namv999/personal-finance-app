@@ -11,6 +11,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/scheduled_provider.dart';
 import '../repositories/wallet_repository.dart';
 import '../routes/app_router.dart';
+import 'app_dialog.dart';
 
 /// Opens the cascade delete preview dialog and coordinates deletion,
 /// reloading affected providers, and navigating based on remaining wallets.
@@ -144,7 +145,7 @@ class _WalletDeleteDialogState extends State<WalletDeleteDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       title: Row(
         children: [
           Container(
@@ -367,27 +368,13 @@ class _WalletDeleteDialogState extends State<WalletDeleteDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Hủy',
-              style: TextStyle(color: AppColors.textSecondary)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.danger,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: AppColors.divider,
-            disabledForegroundColor: AppColors.textSecondary,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          onPressed:
+        AppDialogTwoButtons(
+          cancelLabel: 'Hủy',
+          onCancel: () => Navigator.of(context).pop(false),
+          confirmLabel: _secondsLeft > 0 ? 'Xóa ($_secondsLeft)' : 'Xóa',
+          onConfirm:
               _secondsLeft > 0 ? null : () => Navigator.of(context).pop(true),
-          child: Text(
-            _secondsLeft > 0 ? 'Đồng ý xóa ($_secondsLeft)' : 'Đồng ý xóa',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          danger: true,
         ),
       ],
     );

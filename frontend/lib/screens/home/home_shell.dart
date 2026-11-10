@@ -1,13 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
+import '../../providers/saving_goal_provider.dart';
+import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../saving_goals/saving_goal_list_screen.dart';
 import '../transactions/transaction_list_screen.dart';
 import '../wallets/wallet_list_screen.dart';
 import 'home_screen.dart';
 import 'more_menu_screen.dart';
+
+// File-level flag to ensure the chat hint bubble is shown only once per app session
+bool _chatHintShown = false;
 
 /// Bottom navigation shell. Keeps each tab's own Scaffold/AppBar so nested
 /// pages (e.g. wallet detail) can still push on top cleanly via go_router.
@@ -23,11 +32,44 @@ class _HomeShellState extends State<HomeShell> {
   late int _index;
   final Set<int> _loadedTabs = {};
 
+  bool _showChatBubble = false;
+  bool _chatBubbleVisible = false;
+  Timer? _bubbleShowTimer;
+  Timer? _bubbleHideTimer;
+
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex;
     _loadedTabs.add(_index);
+
+    if (!_chatHintShown) {
+      _chatHintShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _bubbleShowTimer = Timer(const Duration(milliseconds: 600), () {
+          if (!mounted) return;
+          setState(() {
+            _showChatBubble = true;
+            _chatBubbleVisible = true;
+          });
+          _bubbleHideTimer = Timer(const Duration(seconds: 3), () {
+            if (!mounted) return;
+            setState(() => _chatBubbleVisible = false);
+            Timer(const Duration(milliseconds: 200), () {
+              if (mounted) setState(() => _showChatBubble = false);
+            });
+          });
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _bubbleShowTimer?.cancel();
+    _bubbleHideTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -61,25 +103,42 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
-  Widget? _buildFab(BuildContext context, bool hasWallets) {
+  Widget? _buildAddFab(
+    BuildContext context, {
+    required bool hasWallets,
+    required bool hasTransactions,
+    required bool hasGoals,
+  }) {
     switch (_index) {
       case 0:
-      case 1:
         if (!hasWallets) return null;
         return FloatingActionButton(
           key: const ValueKey('fab_transaction'),
+          heroTag: null,
+          onPressed: () => context.push(AppRoutes.transactionAdd),
+          child: const Icon(Icons.add),
+        );
+      case 1:
+        if (!hasWallets || !hasTransactions) return null;
+        return FloatingActionButton(
+          key: const ValueKey('fab_transaction'),
+          heroTag: null,
           onPressed: () => context.push(AppRoutes.transactionAdd),
           child: const Icon(Icons.add),
         );
       case 2:
+        if (!hasWallets) return null;
         return FloatingActionButton(
           key: const ValueKey('fab_wallet'),
+          heroTag: null,
           onPressed: () => context.push(AppRoutes.walletAdd),
           child: const Icon(Icons.add),
         );
       case 3:
+        if (!hasGoals) return null;
         return FloatingActionButton(
           key: const ValueKey('fab_saving_goal'),
+          heroTag: null,
           onPressed: () => context.push(AppRoutes.savingGoalAdd),
           child: const Icon(Icons.add),
         );
@@ -88,10 +147,163 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  Widget _buildChatBubble(BuildContext context) {
+    if (!_showChatBubble) return const SizedBox.shrink();
+
+    return IgnorePointer(
+      ignoring: !_chatBubbleVisible,
+      child: AnimatedOpacity(
+        opacity: _chatBubbleVisible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.only(left: 12, right: 4, top: 4, bottom: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.divider),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.aiChat),
+                child: const Text(
+                  'Chat với Bot!',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  _bubbleHideTimer?.cancel();
+                  setState(() {
+                    _showChatBubble = false;
+                    _chatBubbleVisible = false;
+                  });
+                },
+                child: const SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Icon(
+                    Icons.close,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatRow(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildChatBubble(context),
+        FloatingActionButton.small(
+          key: const ValueKey('fab_chat'),
+          heroTag: null,
+          backgroundColor: AppColors.secondary,
+          foregroundColor: Colors.white,
+          tooltip: 'Chat với Bot',
+          onPressed: () => context.push(AppRoutes.aiChat),
+          child: const Icon(Icons.auto_awesome),
+        ),
+      ],
+    );
+  }
+
+  Widget? _buildFab(
+    BuildContext context, {
+    required bool hasWallets,
+    required bool hasTransactions,
+    required bool hasGoals,
+  }) {
+    if (_index == 4) return null;
+
+    final addFab = _buildAddFab(
+      context,
+      hasWallets: hasWallets,
+      hasTransactions: hasTransactions,
+      hasGoals: hasGoals,
+    );
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (child, animation) {
+        return ScaleTransition(
+          scale: animation,
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        key: ValueKey('fab_group_$_index'),
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _buildChatRow(context),
+          if (addFab != null) ...[
+            const SizedBox(height: 12),
+            addFab,
+          ],
+        ],
+      ),
+    );
+  }
+
+  bool _getHasWallets(BuildContext context) {
+    try {
+      return context.select<WalletProvider, bool>((p) => p.wallets.isNotEmpty);
+    } catch (_) {
+      return true;
+    }
+  }
+
+  bool _getHasTransactions(BuildContext context) {
+    if (_index != 1) return true;
+    try {
+      return context.select<TransactionProvider, bool>(
+          (p) => p.transactions.isNotEmpty);
+    } catch (_) {
+      return true;
+    }
+  }
+
+  bool _getHasGoals(BuildContext context) {
+    if (_index != 3) return true;
+    try {
+      return context
+          .select<SavingGoalProvider, bool>((p) => p.goals.isNotEmpty);
+    } catch (_) {
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasWallets =
-        context.select<WalletProvider, bool>((p) => p.wallets.isNotEmpty);
+    final hasWallets = _getHasWallets(context);
+    final hasTransactions = _getHasTransactions(context);
+    final hasGoals = _getHasGoals(context);
 
     return Scaffold(
       body: IndexedStack(
@@ -104,7 +316,12 @@ class _HomeShellState extends State<HomeShell> {
           _buildTab(4),
         ],
       ),
-      floatingActionButton: _buildFab(context, hasWallets),
+      floatingActionButton: _buildFab(
+        context,
+        hasWallets: hasWallets,
+        hasTransactions: hasTransactions,
+        hasGoals: hasGoals,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() {

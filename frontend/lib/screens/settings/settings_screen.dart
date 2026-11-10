@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../widgets/app_dialog.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -82,6 +83,14 @@ class SettingsScreen extends StatelessWidget {
             onTap: () async {
               final userId = context.read<AuthProvider>().currentUser?.id;
               if (userId == null) return;
+              final confirmed = await showAppConfirm(
+                context,
+                title: 'Xác nhận',
+                message: 'Bạn có chắc muốn reset cursor về 0?',
+                cancelLabel: 'Hủy',
+                confirmLabel: 'Đồng ý',
+              );
+              if (confirmed != true || !context.mounted) return;
               await context.read<SyncPullRepository>().resetCursor(userId);
               if (!context.mounted) return;
               ScaffoldMessenger.of(context)
@@ -124,23 +133,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _run600TransactionCheck(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tạo giao dịch kiểm thử?'),
-        content: const Text(
-            'Tạo 600 giao dịch chi 1 VND trong ví hiện tại, đồng bộ lên máy chủ và kiểm tra đủ 600 bản ghi.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Bắt đầu'),
-          ),
-        ],
-      ),
+    final confirmed = await showAppConfirm(
+      context,
+      title: 'Tạo giao dịch kiểm thử?',
+      message:
+          'Tạo 600 giao dịch chi 1 VND trong ví hiện tại, đồng bộ lên máy chủ và kiểm tra đủ 600 bản ghi.',
+      cancelLabel: 'Hủy',
+      confirmLabel: 'Bắt đầu',
     );
     if (confirmed != true || !context.mounted) return;
 

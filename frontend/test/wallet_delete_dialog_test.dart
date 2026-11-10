@@ -63,28 +63,28 @@ void main() {
         findsOneWidget);
 
     // Verify button is initially disabled with countdown 6
-    expect(find.text('Đồng ý xóa (6)'), findsOneWidget);
-    final deleteBtnInitial = tester.widget<ElevatedButton>(
-      find.widgetWithText(ElevatedButton, 'Đồng ý xóa (6)'),
+    expect(find.text('Xóa (6)'), findsOneWidget);
+    final deleteBtnInitial = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Xóa (6)'),
     );
     expect(deleteBtnInitial.onPressed, isNull);
 
     // Advance 3 seconds
     await tester.pump(const Duration(seconds: 3));
-    expect(find.text('Đồng ý xóa (3)'), findsOneWidget);
+    expect(find.text('Xóa (3)'), findsOneWidget);
 
     // Advance remaining 3 seconds (total 6s)
     await tester.pump(const Duration(seconds: 3));
-    expect(find.text('Đồng ý xóa'), findsOneWidget);
+    expect(find.text('Xóa'), findsOneWidget);
 
     // Verify button is now enabled
-    final deleteBtnActive = tester.widget<ElevatedButton>(
-      find.widgetWithText(ElevatedButton, 'Đồng ý xóa'),
+    final deleteBtnActive = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Xóa'),
     );
     expect(deleteBtnActive.onPressed, isNotNull);
 
     // Tap confirm delete
-    await tester.tap(find.text('Đồng ý xóa'));
+    await tester.tap(find.text('Xóa'));
     await tester.pumpAndSettle();
 
     // Dialog should be dismissed
@@ -132,11 +132,11 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pump();
 
-    expect(find.text('Đồng ý xóa'), findsOneWidget);
+    expect(find.text('Xóa'), findsOneWidget);
     expect(
       tester
-          .widget<ElevatedButton>(
-              find.widgetWithText(ElevatedButton, 'Đồng ý xóa'))
+          .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Xóa'))
           .onPressed,
       isNotNull,
     );
@@ -164,6 +164,6 @@ void main() {
       find.text('2 giao dịch hẹn trước sẽ bị xóa, thông báo nhắc cũng bị hủy.'),
       findsOneWidget,
     );
-    expect(find.text('Đồng ý xóa (6)'), findsOneWidget);
+    expect(find.text('Xóa (6)'), findsOneWidget);
   });
 }

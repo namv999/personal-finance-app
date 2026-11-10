@@ -1,78 +1,91 @@
-import '../core/utils/clock.dart';
-
-
-class AppUser {
-  final String id;
-  final String fullName;
-  final String? email;
-  final String passwordHash;
-  final int? monthlyIncome; // reserved for a future feature, unused in MVP
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-  final bool isDeleted;
-
-  AppUser({
-    required this.id,
-    required this.fullName,
-    this.email,
-    required this.passwordHash,
-    this.monthlyIncome,
-    required this.createdAt,
-    this.updatedAt,
-    this.isDeleted = false,
-  });
-
-  factory AppUser.fromMap(Map<String, dynamic> map) => AppUser(
-        id: map['id'] as String,
-        fullName: map['full_name'] as String,
-        email: map['email'] as String?,
-        passwordHash: map['password_hash'] as String,
-        monthlyIncome: map['monthly_income'] as int?,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
-        isDeleted: (map['is_deleted'] as int? ?? 0) == 1,
-      );
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'full_name': fullName,
-        'email': email,
-        'password_hash': passwordHash,
-        'monthly_income': monthlyIncome,
-        'created_at': toUtcIso(createdAt),
-        'updated_at': toUtcIsoN(updatedAt),
-        'is_deleted': isDeleted ? 1 : 0,
-      };
-
-  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-        id: json['id'],
-        fullName: json['fullName'],
-        email: json['email'],
-        passwordHash: json['passwordHash'] ?? '',
-        monthlyIncome: json['monthlyIncome'],
-        createdAt: DateTime.parse(json['createdAt']),
-        updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-        isDeleted: json['isDeleted'] ?? false,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'fullName': fullName,
-        'email': email,
-        'monthlyIncome': monthlyIncome,
-        'createdAt': toUtcIso(createdAt),
-        'updatedAt': toUtcIsoN(updatedAt),
-        'isDeleted': isDeleted,
-      };
-
-  AppUser copyWith({String? fullName, String? email, int? monthlyIncome}) => AppUser(
-        id: id,
-        fullName: fullName ?? this.fullName,
-        email: email ?? this.email,
-        passwordHash: passwordHash,
-        monthlyIncome: monthlyIncome ?? this.monthlyIncome,
-        createdAt: createdAt,
-        updatedAt: nowUtc(),
-        isDeleted: isDeleted,
-      );
-}
+import '../core/utils/clock.dart';
+
+
+class AppUser {
+  final String id;
+  final String fullName;
+  final String? email;
+  final String passwordHash;
+  final int? monthlyIncome; // reserved for a future feature, unused in MVP
+  final String? avatarPath;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final bool isDeleted;
+
+  AppUser({
+    required this.id,
+    required this.fullName,
+    this.email,
+    required this.passwordHash,
+    this.monthlyIncome,
+    this.avatarPath,
+    required this.createdAt,
+    this.updatedAt,
+    this.isDeleted = false,
+  });
+
+  factory AppUser.fromMap(Map<String, dynamic> map) => AppUser(
+        id: map['id'] as String,
+        fullName: map['full_name'] as String,
+        email: map['email'] as String?,
+        passwordHash: map['password_hash'] as String,
+        monthlyIncome: map['monthly_income'] as int?,
+        avatarPath: map['avatar_path'] as String?,
+        createdAt: DateTime.parse(map['created_at'] as String),
+        updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
+        isDeleted: (map['is_deleted'] as int? ?? 0) == 1,
+      );
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'full_name': fullName,
+        'email': email,
+        'password_hash': passwordHash,
+        'monthly_income': monthlyIncome,
+        'avatar_path': avatarPath,
+        'created_at': toUtcIso(createdAt),
+        'updated_at': toUtcIsoN(updatedAt),
+        'is_deleted': isDeleted ? 1 : 0,
+      };
+
+  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
+        id: json['id'],
+        fullName: json['fullName'],
+        email: json['email'],
+        passwordHash: json['passwordHash'] ?? '',
+        monthlyIncome: json['monthlyIncome'],
+        avatarPath: json['avatarPath'],
+        createdAt: DateTime.parse(json['createdAt']),
+        updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+        isDeleted: json['isDeleted'] ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'fullName': fullName,
+        'email': email,
+        'monthlyIncome': monthlyIncome,
+        'createdAt': toUtcIso(createdAt),
+        'updatedAt': toUtcIsoN(updatedAt),
+        'isDeleted': isDeleted,
+      };
+
+  AppUser copyWith({
+    String? fullName,
+    String? email,
+    int? monthlyIncome,
+    String? avatarPath,
+    bool clearAvatar = false,
+  }) =>
+      AppUser(
+        id: id,
+        fullName: fullName ?? this.fullName,
+        email: email ?? this.email,
+        passwordHash: passwordHash,
+        monthlyIncome: monthlyIncome ?? this.monthlyIncome,
+        avatarPath: clearAvatar ? null : (avatarPath ?? this.avatarPath),
+        createdAt: createdAt,
+        updatedAt: nowUtc(),
+        isDeleted: isDeleted,
+      );
+}

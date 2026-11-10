@@ -10,6 +10,7 @@ import '../../providers/category_provider.dart';
 import '../../providers/scheduled_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../repositories/scheduled_transaction_repository.dart';
+import '../../widgets/app_dialog.dart';
 import '../../widgets/app_text_field.dart';
 
 /// Hiển thị hộp thoại xử lý các giao dịch hẹn trước đã đến hạn.
@@ -104,25 +105,13 @@ class _DueDialogState extends State<DueDialog> {
 
   Future<void> _skipAll(int count) async {
     if (_processing) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Bỏ qua các kỳ đã lỡ'),
-        content: Text('Bỏ qua $count kỳ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Không'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Bỏ qua',
-              style: TextStyle(color: AppColors.danger),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showAppConfirm(
+      context,
+      title: 'Bỏ qua các kỳ đã lỡ',
+      message: 'Bỏ qua $count kỳ?',
+      cancelLabel: 'Quay lại',
+      confirmLabel: 'Bỏ qua',
+      danger: true,
     );
 
     if (confirmed == true && mounted) {
@@ -318,25 +307,49 @@ class _DueDialogState extends State<DueDialog> {
                 ],
               ),
             ),
-            actionsOverflowButtonSpacing: 8,
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             actions: [
-              if (due.length > 1)
-                TextButton(
-                  onPressed: _processing ? null : () => _skipAll(due.length),
-                  child: const Text(
-                    'Hủy tất cả các kỳ đã lỡ',
-                    style: TextStyle(color: AppColors.danger),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed:
+                                _processing ? null : () => _cancel(occurrence),
+                            child: const Text('Bỏ qua'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: FilledButton(
+                            onPressed:
+                                _processing ? null : () => _confirm(occurrence),
+                            child: const Text('Xác nhận'),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              OutlinedButton(
-                onPressed:
-                    _processing ? null : () => _cancel(occurrence),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed:
-                    _processing ? null : () => _confirm(occurrence),
-                child: const Text('Xác nhận'),
+                  if (due.length > 1) ...[
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed:
+                          _processing ? null : () => _skipAll(due.length),
+                      child: const Text(
+                        'Bỏ qua tất cả',
+                        style: TextStyle(color: AppColors.danger),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           );

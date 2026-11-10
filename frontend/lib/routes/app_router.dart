@@ -154,8 +154,11 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
           builder: (c, s) => const AiSuggestionScreen()),
       GoRoute(path: AppRoutes.aiChat, builder: (c, s) => const AiChatScreen()),
       GoRoute(
-          path: AppRoutes.pendingInbox,
-          builder: (c, s) => const PendingInboxScreen()),
+        path: AppRoutes.pendingInbox,
+        builder: (c, s) => PendingInboxScreen(
+          autoAction: s.uri.queryParameters['action'],
+        ),
+      ),
       GoRoute(
           path: AppRoutes.pasteMessage,
           builder: (c, s) => PasteMessageScreen(
