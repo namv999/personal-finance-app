@@ -232,6 +232,58 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Gửi OTP 6 số qua email, không tiết lộ email có đăng ký hay không
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200': { description: Yêu cầu được tiếp nhận }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: OTP_TOO_SOON
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503':
+          description: MAIL_UNAVAILABLE
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Đổi mật khẩu bằng OTP gửi qua email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp, new_password]
+              properties:
+                email: { type: string, format: email }
+                otp: { type: string, pattern: '^\d{6}$' }
+                new_password: { type: string, minLength: 6, maxLength: 72 }
+      responses:
+        '200': { description: Mật khẩu đã được đổi }
+        '400':
+          description: INVALID_OTP hoặc VALIDATION_FAILED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /sync/push:
     post:
       tags: [Sync]

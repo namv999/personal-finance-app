@@ -7,6 +7,7 @@ import '../providers/wallet_provider.dart';
 import '../screens/ai_suggestions/ai_suggestion_screen.dart';
 import '../screens/ai_chat/ai_chat_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/budgets/budget_form_screen.dart';
 import '../screens/budgets/budget_list_screen.dart';
@@ -40,7 +41,8 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
     refreshListenable: Listenable.merge([authProvider, walletProvider]),
     redirect: (context, state) {
       final loggingIn = state.matchedLocation == AppRoutes.login ||
-          state.matchedLocation == AppRoutes.register;
+          state.matchedLocation == AppRoutes.register ||
+          state.matchedLocation == AppRoutes.forgotPassword;
       final atSplash = state.matchedLocation == AppRoutes.splash;
       final atRequired =
           state.matchedLocation == AppRoutes.walletCreateRequired;
@@ -68,6 +70,9 @@ GoRouter buildRouter(AuthProvider authProvider, WalletProvider walletProvider) {
       GoRoute(path: AppRoutes.login, builder: (c, s) => const LoginScreen()),
       GoRoute(
           path: AppRoutes.register, builder: (c, s) => const RegisterScreen()),
+      GoRoute(
+          path: AppRoutes.forgotPassword,
+          builder: (c, s) => const ForgotPasswordScreen()),
       GoRoute(
         path: AppRoutes.home,
         builder: (c, s) {

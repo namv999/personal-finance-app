@@ -41,6 +41,14 @@ class AuthProvider extends ChangeNotifier {
         status = AuthStatus.authenticated;
       });
 
+  Future<bool> forgotPassword(String email) =>
+      _guard(() => _repo.forgotPassword(email));
+
+  Future<bool> resetPassword(String email, String otp, String newPassword) =>
+      _guard(() => _repo.resetPassword(
+          email: email, otp: otp, newPassword: newPassword));
+
+
   Future<void> logout() async {
     await _repo.logout();
     currentUser = null;

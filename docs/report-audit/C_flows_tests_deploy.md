@@ -765,3 +765,8 @@ Major history milestones (`git log --all --date=short --pretty=format`): 25 Aug 
 3. Production HTTPS endpoint, backend host/container orchestration, SQL Server production topology, backup policy and release signing are not described by the checked-in implementation: CHƯA XÁC MINH.
 4. The deployment PlantUML reflects developer guide/dev runtime, not production infrastructure.
 5. The current line-level test results are reliable from user-provided CLI output and Maven Surefire; no new tests were launched during this cross-cutting read-only audit.
+# Khôi phục mật khẩu bằng OTP
+
+Backend gửi OTP 6 chữ số qua Gmail, chỉ lưu BCrypt hash, hết hạn sau 10 phút, tối đa 5 lần nhập sai và giới hạn gửi lại 60 giây. Endpoint không xác nhận email chưa đăng ký; gửi mail lỗi sẽ xóa OTP để người dùng thử lại. Flutter có màn hình gửi mã và đổi mật khẩu, đồng thời đồng bộ hash SHA-256 cục bộ sau khi server xác nhận thành công. Cấu hình Gmail bằng `MAIL_USERNAME` và `MAIL_PASSWORD` trong `backend/env-local.ps1`; tuyệt đối không ghi App Password vào mã nguồn hoặc báo cáo.
+
+Giới hạn: JWT đã cấp trước đó vẫn có hiệu lực đến khi hết hạn; chỉ có thể reset email đã đăng ký và đồng bộ trên backend. Mã `OTP_TOO_SOON` chỉ xuất hiện với tài khoản có thật nên tiết lộ nhẹ trạng thái đăng ký; yêu cầu email không tồn tại cũng có thể trả lời nhanh hơn do không gửi SMTP.

@@ -16,6 +16,14 @@ spring:
       hibernate.type.preferred_instant_jdbc_type: TIMESTAMP
   jackson:
     property-naming-strategy: SNAKE_CASE
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
   flyway:
     enabled: true
 

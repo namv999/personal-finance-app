@@ -31,6 +31,18 @@ public class User {
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted;
 
+    @Column(name = "reset_otp_hash")
+    private String resetOtpHash;
+
+    @Column(name = "reset_otp_expires_at")
+    private Instant resetOtpExpiresAt;
+
+    @Column(name = "reset_otp_attempts", nullable = false)
+    private int resetOtpAttempts;
+
+    @Column(name = "reset_otp_sent_at")
+    private Instant resetOtpSentAt;
+
     protected User() {
     }
 
@@ -57,5 +69,38 @@ public class User {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getResetOtpHash() { return resetOtpHash; }
+
+    public boolean isOtpCoolingDown(Instant now, int cooldownSec) {
+        return resetOtpSentAt != null && now.isBefore(resetOtpSentAt.plusSeconds(cooldownSec));
+    }
+
+    public boolean hasActiveOtp(Instant now, int maxAttempts) {
+        return resetOtpHash != null && resetOtpExpiresAt != null
+                && now.isBefore(resetOtpExpiresAt) && resetOtpAttempts < maxAttempts;
+    }
+
+    public void setResetOtp(String hash, Instant expiresAt, Instant now) {
+        this.resetOtpHash = hash;
+        this.resetOtpExpiresAt = expiresAt;
+        this.resetOtpSentAt = now;
+        this.resetOtpAttempts = 0;
+    }
+
+    public void registerOtpFailure() { this.resetOtpAttempts++; }
+
+    public void clearResetOtp() {
+        this.resetOtpHash = null;
+        this.resetOtpExpiresAt = null;
+        this.resetOtpSentAt = null;
+        this.resetOtpAttempts = 0;
+    }
+
+    public void changePassword(String newHash, Instant now) {
+        this.passwordHash = newHash;
+        this.updatedAt = now;
+        clearResetOtp();
     }
 }

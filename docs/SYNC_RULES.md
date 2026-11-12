@@ -16,7 +16,10 @@
 - POST /auth/register {id, full_name, email, password} -> 201 {token, user}; trùng email -> 409.
   id là UUID do client sinh (ngoại lệ duy nhất của quy tắc "không nhận id từ body").
 - POST /auth/login {email, password} -> {token, user}; sai -> 401 (thông báo chung).
+- POST /auth/forgot-password {email} -> 200 {status: OK}; email chưa có tài khoản vẫn trả 200. Với tài khoản hiện có, server gửi OTP 6 số, hạn 10 phút, tối đa 5 lần nhập sai, cooldown gửi lại 60 giây; lỗi SMTP -> 503.
+- POST /auth/reset-password {email, otp, new_password} -> 200 {status: OK}; OTP sai/hết hạn/đã dùng -> 400 INVALID_OTP. Đổi mật khẩu không thu hồi JWT đã phát hành trước đó; client cập nhật password_hash local để đăng nhập offline.
 - Email lưu lowercase, unique. Server không bao giờ trả password hash.
+- OTP chỉ lưu trên server dưới dạng BCrypt hash; không đồng bộ và không lưu ở SQLite client. Reset chỉ dùng được khi email đã tồn tại trên backend.
 
 ## POST /sync/push
 - Req: {records: {wallets: [...], categories: [...], ...}} - mỗi bản ghi là snapshot hiện tại (gồm is_deleted).

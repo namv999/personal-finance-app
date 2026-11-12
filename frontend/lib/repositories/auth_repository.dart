@@ -84,6 +84,38 @@ class AuthRepository {
     }
   }
 
+  Future<void> forgotPassword(String email) async {
+    try {
+      await ApiClient.instance.post(ApiEndpoints.forgotPassword,
+          body: {'email': _normalizeEmail(email)});
+    } on NetworkException {
+      throw Exception('Cần kết nối mạng để đặt lại mật khẩu');
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    }
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final mail = _normalizeEmail(email);
+    try {
+      await ApiClient.instance.post(ApiEndpoints.resetPassword, body: {
+        'email': mail,
+        'otp': otp,
+        'new_password': newPassword,
+      });
+    } on NetworkException {
+      throw Exception('Cần kết nối mạng để đặt lại mật khẩu');
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    }
+    await _db.update(Tables.users, {'password_hash': _hash(newPassword)},
+        where: 'email = ? AND is_deleted = 0', whereArgs: [mail]);
+  }
+
   Future<AppUser> _createLocalUser(DatabaseExecutor e,
       {required String id,
       required String fullName,

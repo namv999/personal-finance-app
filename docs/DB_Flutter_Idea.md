@@ -38,6 +38,10 @@ erDiagram
         datetime created_at
         datetime updated_at
         bool is_deleted
+        string reset_otp_hash "chỉ server, BCrypt hash OTP"
+        datetime reset_otp_expires_at "chỉ server"
+        int reset_otp_attempts "chỉ server"
+        datetime reset_otp_sent_at "chỉ server"
     }
 
     WALLETS {
@@ -219,6 +223,10 @@ CREATE TABLE users (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     is_deleted INTEGER DEFAULT 0
+    -- Phía server SQL Server còn có reset_otp_hash NVARCHAR(100) NULL,
+    -- reset_otp_expires_at DATETIME2(3) NULL,
+    -- reset_otp_attempts INT NOT NULL DEFAULT 0,
+    -- reset_otp_sent_at DATETIME2(3) NULL; các trường OTP không lưu ở SQLite client.
 );
 
 CREATE TABLE wallets (

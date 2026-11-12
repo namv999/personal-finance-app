@@ -73,6 +73,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: Validators.password,
                     prefixIcon: const Icon(Icons.lock_outline),
                   ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => context.push(AppRoutes.forgotPassword),
+                      child: const Text('Quên mật khẩu?'),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: auth.isLoading ? null : _submit,
