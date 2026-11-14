@@ -1,0 +1,23 @@
+# Sao chép thành env-local.ps1, điền giá trị thật rồi chạy: . .\env-local.ps1
+# Không commit env-local.ps1 lên Git.
+
+# Cơ sở dữ liệu chính (pfm)
+$env:DB_URL      = "jdbc:sqlserver://localhost:1433;databaseName=pfm;encrypt=true;trustServerCertificate=true"
+$env:DB_USER     = "<db-user>"
+$env:DB_PASSWORD = "<db-password>"
+
+# Cơ sở dữ liệu cho test (pfm_test), tách riêng khỏi DB_URL
+$env:TEST_DB_URL = "jdbc:sqlserver://localhost:1433;databaseName=pfm_test;encrypt=true;trustServerCertificate=true;integratedSecurity=true"
+
+# Khóa ký JWT (HS256): chuỗi ngẫu nhiên từ 32 ký tự trở lên
+$env:JWT_SECRET = "<jwt-secret-32-chars-or-more>"
+
+# Gemini API
+$env:GEMINI_API_KEY        = "<gemini-api-key>"
+$env:GEMINI_MODEL          = "gemini-3.1-flash-lite"
+$env:GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite"
+
+# Gửi email OTP qua Gmail SMTP
+# MAIL_PASSWORD là mật khẩu ứng dụng 16 ký tự (cần bật xác minh 2 bước), viết liền, không dấu cách
+$env:MAIL_USERNAME = "<your-gmail>@gmail.com"
+$env:MAIL_PASSWORD = "<gmail-app-password>"
