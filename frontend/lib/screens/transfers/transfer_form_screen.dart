@@ -44,9 +44,13 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
     if (!mounted || _defaultsInit) return;
     final wallets = context.read<WalletProvider>().wallets;
     if (wallets.length < 2) return;
-    _defaultsInit = true;
     final goals = context.read<SavingGoalProvider>().goals;
-    final requestedGoal = goals.where((g) => g.id == widget.goalId).firstOrNull;
+    if (widget.goalId != null && goals.isEmpty) {
+      return;
+    }
+    _defaultsInit = true;
+    final targetGoalId = widget.goalId ?? _goalId;
+    final requestedGoal = goals.where((g) => g.id == targetGoalId).firstOrNull;
     final goalWalletId = requestedGoal?.walletId;
     final linkedDestination = goalWalletId == null
         ? null
@@ -56,8 +60,8 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
         : wallets.firstWhere((w) => w.id != linkedDestination.id);
     final destination = linkedDestination ?? wallets[1];
     setState(() {
-      _goalId = requestedGoal?.id;
-      _goalTouched = requestedGoal != null;
+      _goalId = requestedGoal?.id ?? targetGoalId;
+      _goalTouched = (requestedGoal != null || targetGoalId != null);
       _sourceId = source.id;
       _destinationId = destination.id;
       _autoPickGoal(sourceId: _sourceId, destId: _destinationId);
@@ -129,7 +133,16 @@ class _TransferFormScreenState extends State<TransferFormScreen> {
         note: _noteController.text.trim(),
       );
       await refresh.run();
-      if (mounted) context.pop();
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else if (_goalId != null || widget.goalId != null) {
+          final targetGoalId = _goalId ?? widget.goalId!;
+          context.go(AppRoutes.savingGoalDetailPath(targetGoalId));
+        } else {
+          context.go(AppRoutes.transfers);
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

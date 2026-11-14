@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:personal_finance_app/core/constants/app_routes.dart';
 import 'package:personal_finance_app/models/category.dart';
 import 'package:personal_finance_app/models/transaction.dart';
+import 'package:personal_finance_app/models/transaction_filter.dart';
 import 'package:personal_finance_app/models/wallet.dart';
 import 'package:personal_finance_app/providers/auth_provider.dart';
 import 'package:personal_finance_app/providers/budget_provider.dart';
@@ -74,6 +75,15 @@ class _Transactions extends ChangeNotifier implements TransactionProvider {
 
   @override
   bool isLoading = false;
+
+  @override
+  bool get isFiltering => false;
+
+  @override
+  List<FinanceTransaction> get searchResults => const [];
+
+  @override
+  TransactionFilter get filter => const TransactionFilter();
 
   @override
   Future<void> addTransaction({

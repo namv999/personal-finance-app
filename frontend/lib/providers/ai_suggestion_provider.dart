@@ -57,15 +57,18 @@ class AiSuggestionProvider extends ChangeNotifier {
     try {
       final sync = await _sync.syncNow();
       if (!sync.ok) {
-        if (sync.error == 'NO_TOKEN')
+        if (sync.error == 'NO_TOKEN') {
           return const SuggestOutcome(SuggestStatus.offline);
-        if (sync.unauthorized)
+        }
+        if (sync.unauthorized) {
           return const SuggestOutcome(SuggestStatus.unauthorized);
+        }
         return SuggestOutcome(SuggestStatus.syncFailed, sync.error);
       }
       final outcome = await _repo.requestSuggestion(userId, type);
-      if (outcome.status == SuggestStatus.ok && type == periodType)
+      if (outcome.status == SuggestStatus.ok && type == periodType) {
         await load();
+      }
       return outcome;
     } finally {
       isRequesting = false;

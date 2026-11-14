@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_routes.dart';
 import '../../core/utils/clock.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/ledger_refresh.dart';
@@ -53,7 +54,13 @@ class _SavingGoalFormScreenState extends State<SavingGoalFormScreen> {
             expectedDate: _expectedDate,
           );
       await refresh.run();
-      if (mounted) context.pop();
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(AppRoutes.savingGoals);
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -92,7 +99,7 @@ class _SavingGoalFormScreenState extends State<SavingGoalFormScreen> {
                 DropdownButtonFormField<String?>(
                   initialValue: _walletId,
                   decoration: const InputDecoration(
-                      labelText: 'Ví tiết kiệm liên kết (tùy chọn)'),
+                       labelText: 'Ví tiết kiệm liên kết (tùy chọn)'),
                   items: [
                     const DropdownMenuItem(
                         value: null, child: Text('Không liên kết')),

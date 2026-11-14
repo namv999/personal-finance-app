@@ -65,6 +65,8 @@ class TransactionRepository {
     DateTime? from,
     DateTime? to,
     int? limit,
+    CategoryType? type,
+    String? categoryId,
   }) async {
     final where = StringBuffer('user_id = ? AND is_deleted = 0');
     final args = <dynamic>[userId];
@@ -79,6 +81,14 @@ class TransactionRepository {
     if (to != null) {
       where.write(' AND transaction_date <= ?');
       args.add(dateOnly(to));
+    }
+    if (type != null) {
+      where.write(' AND type = ?');
+      args.add(type.value);
+    }
+    if (categoryId != null) {
+      where.write(' AND category_id = ?');
+      args.add(categoryId);
     }
     final rows = await _db.query(
       Tables.transactions,
